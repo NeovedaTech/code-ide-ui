@@ -1,0 +1,32 @@
+services:
+  rival-ui-release:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_EXECUTION_URL=${NEXT_PUBLIC_EXECUTION_URL}
+    ports:
+      - "${PORT:-3131}:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+      - NEXT_PUBLIC_EXECUTION_URL=${NEXT_PUBLIC_EXECUTION_URL}
+
+    env_file:
+      - .env
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--quiet",
+          "--tries=1",
+          "--spider",
+          "http://localhost:3000",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
