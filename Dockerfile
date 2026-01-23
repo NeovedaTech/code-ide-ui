@@ -28,9 +28,11 @@ COPY . .
 
 # Define build arguments for NEXT_PUBLIC_ environment variables
 ARG NEXT_PUBLIC_EXECUTION_URL
+ARG MONGODB_URI
 
 # Set environment variables from build args (needed for Next.js build)
 ENV NEXT_PUBLIC_EXECUTION_URL=${NEXT_PUBLIC_EXECUTION_URL}
+ENV MONGODB_URI=${MONGODB_URI}
 
 # Build the application
 RUN \

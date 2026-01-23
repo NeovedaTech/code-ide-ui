@@ -5,6 +5,7 @@ services:
       dockerfile: Dockerfile
       args:
         - NEXT_PUBLIC_EXECUTION_URL=${NEXT_PUBLIC_EXECUTION_URL}
+        - MONGODB_URI=${MONGODB_URI}
     ports:
       - "${PORT:-3030}:3000"
     environment:
@@ -12,6 +13,7 @@ services:
       - PORT=3000
       - HOSTNAME=0.0.0.0
       - NEXT_PUBLIC_EXECUTION_URL=${NEXT_PUBLIC_EXECUTION_URL}
+      - MONGODB_URI=${MONGODB_URI}
     env_file:
       - .env
     restart: unless-stopped
