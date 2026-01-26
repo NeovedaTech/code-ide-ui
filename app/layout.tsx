@@ -1,6 +1,6 @@
 import Providers from "@/providers/Providers";
 import type { Metadata } from "next";
-
+import "./globals.css";
 export const metadata: Metadata = {
   title: "Knovia Assessment Platform",
   description: "Knovia Assessment Platform",

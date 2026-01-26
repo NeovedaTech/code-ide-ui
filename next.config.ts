@@ -7,6 +7,9 @@ const nextConfig: NextConfig = {
   images: {
     unoptimized: true,
   },
+  logging: {
+    incomingRequests:true
+  },
 };
 
 export default nextConfig;

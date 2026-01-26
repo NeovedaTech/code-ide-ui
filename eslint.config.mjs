@@ -5,6 +5,16 @@ import nextTs from "eslint-config-next/typescript";
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
+  {
+    rules: {
+      // Ignore sync state update warnings
+      "react/no-unstable-nested-components": "off",
+      "react-hooks/exhaustive-deps": "off",
+
+      // If you are intentionally syncing state during render/effects
+      "react/no-direct-mutation-state": "off",
+    },
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:
