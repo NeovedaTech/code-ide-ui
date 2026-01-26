@@ -1,7 +1,12 @@
-import AssesmentEntry from "@/app/pages/AssesmentEntry";
+import AssesmentEntry from "@/components/pages/AssesmentEntry";
+import { Suspense } from "react";
 
 export default function page() {
-  return <>
-      <AssesmentEntry/>
-  </>;
+  return (
+    <>
+      <Suspense>
+        <AssesmentEntry />
+      </Suspense>
+    </>
+  );
 }
