@@ -4,6 +4,7 @@ services:
       context: ../..
       dockerfile: Dockerfile
       args:
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
         - NEXT_PUBLIC_EXECUTION_URL=${NEXT_PUBLIC_EXECUTION_URL}
         - MONGODB_URI=${MONGODB_URI}
     ports:
@@ -14,6 +15,7 @@ services:
       - HOSTNAME=0.0.0.0
       - NEXT_PUBLIC_EXECUTION_URL=${NEXT_PUBLIC_EXECUTION_URL}
       - MONGODB_URI=${MONGODB_URI}
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
     env_file:
       - .env
     restart: unless-stopped
