@@ -20,8 +20,6 @@ import {
   Shield,
   Clock,
   CheckCircle2,
-  RocketIcon,
-  WifiSync,
 } from "lucide-react";
 
 interface AssessmentInstructionsProps {}

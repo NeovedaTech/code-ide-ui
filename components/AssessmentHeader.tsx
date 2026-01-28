@@ -1,64 +1,9 @@
 "use client";
+
 import { useAssessment } from "@/context/AssesmentContext";
 import { useServerSync } from "@/hooks/AssesmentApi";
 import useCountdown from "@/hooks/useCountdown";
 import { formatTime } from "@/utils/formatTime";
-import { AppBar, Toolbar, Box, Typography, Stack, Chip } from "@mui/material";
-import { styled } from "@mui/material/styles";
-import TimerIcon from "@mui/icons-material/Timer";
-
-const StyledAppBar = styled(AppBar)({
-  backgroundColor: "#ffffff",
-  boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
-  color: "#000",
-});
-
-const StyledToolbar = styled(Toolbar)({
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-  padding: "0 24px",
-});
-
-const LogoBox = styled(Box)({
-  width: 40,
-  height: 40,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  borderRadius: "8px",
-  backgroundColor: "#f5f5f5",
-  "& img": {
-    width: "100%",
-    height: "100%",
-    objectFit: "contain",
-  },
-});
-
-const CenterContent = styled(Box)({
-  flex: 1,
-  display: "flex",
-  justifyContent: "center",
-  alignItems: "center",
-  gap: "8px",
-});
-
-const RightContent = styled(Stack)({
-  display: "flex",
-  flexDirection: "row",
-  alignItems: "center",
-  gap: "16px",
-});
-
-const TimerChip = styled(Chip)(({ theme }) => ({
-  backgroundColor: "#fff3cd",
-  color: "#856404",
-  fontWeight: 600,
-  fontSize: "14px",
-  "& .MuiChip-icon": {
-    color: "#856404",
-  },
-}));
 
 export default function AssessmentHeader() {
   const { currentSection, currResponse } = useAssessment();
@@ -72,67 +17,95 @@ export default function AssessmentHeader() {
 
   if (!serverSync || !currentSection) return null;
 
+  // Determine timer urgency
+  const isUrgent = remaining < 300; // Less than 5 minutes
+  const isCritical = remaining < 60; // Less than 1 minute
+
   return (
-    <StyledAppBar position="static">
-      <StyledToolbar>
-        {/* Left - Logo */}
-        <LogoBox sx={{ paddingX: "100px" }}>
-          <img src="/logo.png" style={{ width: "200px" }} alt="logo" />
-        </LogoBox>
+    <header className="bg-gradient-to-r from-slate-900 to-slate-800 border-b border-slate-700">
+      <div className="flex items-center justify-between px-6 py-2.5">
+        {/* Left - Logo & Assessment Info */}
+        <div className="flex items-center gap-6">
+          <div className="flex items-center px-4 py-1.5 bg-white/10 backdrop-blur-sm rounded-md border border-white/20">
+            <img
+              src="/logo.png"
+              alt="Assessment Platform"
+              className="h-6 w-auto object-contain"
+            />
+          </div>
+        </div>
 
-        {/* Center - Section Info */}
-        <CenterContent>
-          <Typography
-            variant="subtitle2"
-            sx={{ fontWeight: 600, color: "#666" }}
-          >
-            Section:
-          </Typography>
-          <Typography
-            variant="h6"
-            sx={{
-              fontWeight: 700,
-              color: "#000",
-              textTransform: "capitalize",
-            }}
-          >
-            {currentSection?.type}
-          </Typography>
-        </CenterContent>
+        <div className="flex items-center gap-4">
+          <div className="h-8 w-px bg-slate-600"></div>
 
-        {/* Right - Timer and Info */}
-        <RightContent>
-          {/* Raw values (hidden or optional) */}
-          <Typography
-            variant="caption"
-            sx={{
-              display: { xs: "none", sm: "block" },
-              color: "#999",
-              fontSize: "12px",
-            }}
+          <div
+            className={`flex items-center gap-3 px-4 py-1.5 rounded-md border-2 transition-all ${
+              isCritical
+                ? "bg-red-500/10 border-red-500 backdrop-blur-sm"
+                : isUrgent
+                  ? "bg-amber-500/10 border-amber-500 backdrop-blur-sm"
+                  : "bg-blue-500/10 border-blue-500 backdrop-blur-sm"
+            }`}
           >
-            Server: {serverSync?.serverTime}
-          </Typography>
+            {/* Clock Icon */}
+            <svg
+              className={`w-5 h-5 ${
+                isCritical
+                  ? "text-red-400"
+                  : isUrgent
+                    ? "text-amber-400"
+                    : "text-blue-400"
+              }`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
 
-          <Typography
-            variant="caption"
-            sx={{
-              display: { xs: "none", sm: "block" },
-              color: "#999",
-              fontSize: "12px",
-            }}
-          >
-            Max: {currentSection?.maxTime}s
-          </Typography>
+            <div className="flex items-center gap-2">
+              <span
+                className={`text-xs font-bold uppercase tracking-wider ${
+                  isCritical
+                    ? "text-red-300"
+                    : isUrgent
+                      ? "text-amber-300"
+                      : "text-blue-300"
+                }`}
+              >
+                Time:
+              </span>
+              <span
+                className={`text-md font-bold tabular-nums ${
+                  isCritical
+                    ? "text-red-100"
+                    : isUrgent
+                      ? "text-amber-100"
+                      : "text-blue-100"
+                } ${isCritical ? "animate-pulse" : ""}`}
+              >
+                {formatTime(remaining)}
+              </span>
+            </div>
+          </div>
 
-          {/* Formatted Timer */}
-          <TimerChip
-            icon={<TimerIcon />}
-            label={formatTime(remaining)}
-            variant="outlined"
-          />
-        </RightContent>
-      </StyledToolbar>
-    </StyledAppBar>
+          {/* Status Indicator */}
+          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 backdrop-blur-sm rounded-md border border-emerald-500/30">
+            <div className="relative">
+              <div className="w-2 h-2 bg-emerald-400 rounded-full"></div>
+              <div className="absolute inset-0 w-2 h-2 bg-emerald-400 rounded-full animate-ping"></div>
+            </div>
+            <span className="text-xs font-semibold text-emerald-300 uppercase tracking-wider">
+              Live
+            </span>
+          </div>
+        </div>
+      </div>
+    </header>
   );
 }

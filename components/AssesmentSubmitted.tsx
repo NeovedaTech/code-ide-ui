@@ -42,7 +42,7 @@ export default function AssesmentSubmitted() {
 
           {/* What's Next */}
           <div className="space-y-4">
-            <h2 className="text-lg font-bold text-gray-900">What's Next?</h2>
+            <h2 className="text-lg font-bold text-gray-900">What&apos;s Next?</h2>
             <div className="space-y-3">
               <div className="flex gap-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
                 <Mail className="w-6 h-6 text-blue-600 flex-shrink-0 mt-0.5" />
@@ -58,7 +58,7 @@ export default function AssesmentSubmitted() {
                 <div>
                   <h3 className="font-semibold text-blue-900">Results & Feedback</h3>
                   <p className="text-blue-800 text-sm mt-1">
-                    Your results will be available within 24-48 hours. You'll receive a notification once they're ready.
+                    Your results will be available within 24-48 hours. You&apos;ll receive a notification once they&apos;re ready.
                   </p>
                 </div>
               </div>

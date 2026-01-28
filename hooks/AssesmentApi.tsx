@@ -1,5 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { getAssesment, startAssessment, syncAssesment } from "./ApiCalls";
+import {
+  evalCode,
+  getAssesment,
+  startAssessment,
+  submitCode,
+  submitSection,
+  syncAssesment,
+} from "./ApiCalls";
 import { ExamSolutionResponse } from "@/types/assessment";
 
 export const useGetAssesment = ({
@@ -32,5 +39,28 @@ export const useStartTest = () => {
         queryKey: ["assesment"],
       });
     },
+  });
+};
+
+export const useRunCode = () => {
+  return useMutation({
+    mutationFn: evalCode,
+    onSuccess: () => {},
+  });
+};
+
+export const useSubmitCode = () => {
+  return useMutation({
+    mutationFn: submitCode,
+    onSuccess: () => {},
+  });
+};
+
+
+
+export const useSubmitSection = () => {
+  return useMutation({
+    mutationFn: submitSection,
+    onSuccess: () => {},
   });
 };

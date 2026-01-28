@@ -16,45 +16,21 @@ function MarkdownRenderer({ source }: { source: string }) {
       // Headers
       if (line.startsWith("### ")) {
         elements.push(
-          <h3
-            key={i}
-            style={{
-              fontSize: "16px",
-              fontWeight: "bold",
-              marginTop: "12px",
-              marginBottom: "8px",
-            }}
-          >
+          <h3 key={i} className="text-lg font-semibold text-gray-900 mt-4 mb-2">
             {line.slice(4)}
-          </h3>,
+          </h3>
         );
       } else if (line.startsWith("## ")) {
         elements.push(
-          <h2
-            key={i}
-            style={{
-              fontSize: "20px",
-              fontWeight: "bold",
-              marginTop: "16px",
-              marginBottom: "12px",
-            }}
-          >
+          <h2 key={i} className="text-xl font-semibold text-gray-900 mt-5 mb-3">
             {line.slice(3)}
-          </h2>,
+          </h2>
         );
       } else if (line.startsWith("# ")) {
         elements.push(
-          <h1
-            key={i}
-            style={{
-              fontSize: "24px",
-              fontWeight: "bold",
-              marginTop: "20px",
-              marginBottom: "16px",
-            }}
-          >
+          <h1 key={i} className="text-2xl font-bold text-gray-900 mt-6 mb-4">
             {line.slice(2)}
-          </h1>,
+          </h1>
         );
       }
       // Code blocks
@@ -68,20 +44,10 @@ function MarkdownRenderer({ source }: { source: string }) {
         elements.push(
           <pre
             key={i}
-            style={{
-              backgroundColor: "#f5f5f5",
-              border: "1px solid #e0e0e0",
-              borderRadius: "4px",
-              padding: "12px",
-              overflow: "auto",
-              fontSize: "13px",
-              fontFamily: "monospace",
-              marginTop: "8px",
-              marginBottom: "8px",
-            }}
+            className="bg-gray-900 text-gray-100 rounded-lg p-4 my-3 overflow-x-auto text-sm font-mono border border-gray-700"
           >
             <code>{codeLines.join("\n")}</code>
-          </pre>,
+          </pre>
         );
       }
       // Bullet lists
@@ -96,21 +62,11 @@ function MarkdownRenderer({ source }: { source: string }) {
         }
         i--;
         elements.push(
-          <ul
-            key={i}
-            style={{
-              marginLeft: "20px",
-              marginTop: "8px",
-              marginBottom: "8px",
-              paddingLeft: "20px",
-            }}
-          >
+          <ul key={i} className="list-disc list-inside space-y-1.5 my-3 text-gray-700">
             {listItems.map((item, idx) => (
-              <li key={idx} style={{ marginBottom: "4px" }}>
-                {parseInline(item)}
-              </li>
+              <li key={idx} dangerouslySetInnerHTML={{ __html: parseInline(item) }} />
             ))}
-          </ul>,
+          </ul>
         );
       }
       // Numbered lists
@@ -122,33 +78,25 @@ function MarkdownRenderer({ source }: { source: string }) {
         }
         i--;
         elements.push(
-          <ol
-            key={i}
-            style={{
-              marginLeft: "20px",
-              marginTop: "8px",
-              marginBottom: "8px",
-              paddingLeft: "20px",
-            }}
-          >
+          <ol key={i} className="list-decimal list-inside space-y-1.5 my-3 text-gray-700">
             {listItems.map((item, idx) => (
-              <li key={idx} style={{ marginBottom: "4px" }}>
-                {parseInline(item)}
-              </li>
+              <li key={idx} dangerouslySetInnerHTML={{ __html: parseInline(item) }} />
             ))}
-          </ol>,
+          </ol>
         );
       }
       // Empty lines
       else if (line.trim() === "") {
-        elements.push(<div key={i} style={{ height: "12px" }} />);
+        elements.push(<div key={i} className="h-2" />);
       }
       // Regular paragraphs
       else {
         elements.push(
-          <p key={i} style={{ marginBottom: "12px", lineHeight: "1.6" }}>
-            {parseInline(line)}
-          </p>,
+          <p
+            key={i}
+            className="text-gray-700 leading-relaxed my-2"
+            dangerouslySetInnerHTML={{ __html: parseInline(line) }}
+          />
         );
       }
 
@@ -160,17 +108,13 @@ function MarkdownRenderer({ source }: { source: string }) {
 
   const parseInline = (text: string) => {
     return text
-      .replace(/`([^`]+)`/g, (match, code) => `${code}`)
-      .replace(/\*\*([^*]+)\*\*/g, (match, bold) => bold)
-      .replace(/\*([^*]+)\*/g, (match, italic) => italic)
-      .replace(/_([^_]+)_/g, (match, underline) => underline);
+      .replace(/`([^`]+)`/g, (match, code) => `<code class="bg-gray-100 text-red-600 px-1.5 py-0.5 rounded text-sm font-mono">${code}</code>`)
+      .replace(/\*\*([^*]+)\*\*/g, (match, bold) => `<strong class="font-semibold text-gray-900">${bold}</strong>`)
+      .replace(/\*([^*]+)\*/g, (match, italic) => `<em class="italic">${italic}</em>`)
+      .replace(/_([^_]+)_/g, (match, underline) => `<u>${underline}</u>`);
   };
 
-  return (
-    <div style={{ fontSize: "14px", lineHeight: "1.6", color: "#333" }}>
-      {renderMarkdown(source)}
-    </div>
-  );
+  return <div className="prose max-w-none">{renderMarkdown(source)}</div>;
 }
 
 export default function ProblemDescription({
@@ -180,8 +124,8 @@ export default function ProblemDescription({
 }) {
   if (!problem) {
     return (
-      <div style={{ padding: "20px", textAlign: "center", color: "#999" }}>
-        Select a problem
+      <div className="flex items-center justify-center h-full bg-gray-50">
+        <p className="text-gray-500 text-lg font-medium">Select a problem</p>
       </div>
     );
   }
@@ -189,24 +133,24 @@ export default function ProblemDescription({
   const getDifficultyColor = (difficulty: string) => {
     const styles = {
       easy: {
-        color: "#16a34a",
-        backgroundColor: "#f0fdf4",
-        borderColor: "#86efac",
+        color: "#059669",
+        backgroundColor: "#d1fae5",
+        borderColor: "#34d399",
       },
       medium: {
-        color: "#b45309",
-        backgroundColor: "#fefce8",
-        borderColor: "#fde047",
+        color: "#d97706",
+        backgroundColor: "#fef3c7",
+        borderColor: "#fbbf24",
       },
       hard: {
         color: "#dc2626",
-        backgroundColor: "#fef2f2",
-        borderColor: "#fca5a5",
+        backgroundColor: "#fee2e2",
+        borderColor: "#f87171",
       },
       default: {
         color: "#4b5563",
-        backgroundColor: "#f9fafb",
-        borderColor: "#e5e7eb",
+        backgroundColor: "#f3f4f6",
+        borderColor: "#d1d5db",
       },
     };
 
@@ -215,290 +159,166 @@ export default function ProblemDescription({
     );
   };
 
+  const difficultyStyle = getDifficultyColor(problem.difficulty);
+
   return (
-    <div
-      style={{
-        padding: "20px",
-        backgroundColor: "#fff",
-        height: "100%",
-        overflow: "auto",
-      }}
-    >
-      {/* Title Section */}
-      <div style={{ marginBottom: "20px" }}>
-        {/* {problem?._id && (
-          <div style={{ fontSize: '12px', color: '#666', marginBottom: '8px' }}>
-            #{problem._id}
+    <div className="h-full overflow-y-auto bg-white">
+      <div className="max-w-4xl mx-auto px-8 py-8">
+        {/* Title Section */}
+        <div className="border-b border-gray-200 pb-6 mb-6">
+          <h1 className="text-3xl font-bold text-gray-900 mb-3">
+            {problem.title || "Problem Description"}
+          </h1>
+          {problem.difficulty && (
+            <span
+              className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold border"
+              style={{
+                color: difficultyStyle.color,
+                backgroundColor: difficultyStyle.backgroundColor,
+                borderColor: difficultyStyle.borderColor,
+              }}
+            >
+              {problem.difficulty}
+            </span>
+          )}
+        </div>
+
+        {/* Description */}
+        <div className="mb-8">
+          <MarkdownRenderer source={problem.description} />
+        </div>
+
+        {/* Constraints */}
+        {problem?.constraints && problem.constraints.length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold text-gray-900 mb-3 flex items-center">
+              <span className="w-1 h-6 bg-blue-600 mr-3 rounded"></span>
+              Constraints
+            </h2>
+            <ul className="space-y-2 bg-gray-50 rounded-lg p-5 border border-gray-200">
+              {problem.constraints.map((constraint, i) => (
+                <li key={i} className="flex items-start text-gray-700">
+                  <span className="text-blue-600 mr-3 mt-1">•</span>
+                  <span className="flex-1">{constraint}</span>
+                </li>
+              ))}
+            </ul>
           </div>
-        )} */}
-        <h1
-          style={{
-            fontSize: "28px",
-            fontWeight: "bold",
-            marginBottom: "12px",
-            color: "#000",
-          }}
-        >
-          {problem.title || "Problem Description"}
-        </h1>
-        {problem.difficulty && (
-          <span
-            style={{
-              display: "inline-block",
-              padding: "4px 12px",
-              borderRadius: "16px",
-              border: `1px solid ${getDifficultyColor(problem.difficulty).borderColor}`,
-              ...getDifficultyColor(problem.difficulty),
-              fontSize: "13px",
-              fontWeight: "500",
-            }}
-          >
-            {problem.difficulty}
-          </span>
+        )}
+
+        {/* Input Format */}
+        {problem?.inputFormat && problem.inputFormat.length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold text-gray-900 mb-3 flex items-center">
+              <span className="w-1 h-6 bg-green-600 mr-3 rounded"></span>
+              Input Format
+            </h2>
+            <ul className="space-y-2 bg-gray-50 rounded-lg p-5 border border-gray-200">
+              {problem.inputFormat.map((format, i) => (
+                <li key={i} className="flex items-start text-gray-700">
+                  <span className="text-green-600 mr-3 mt-1">•</span>
+                  <span className="flex-1">{format}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* Output Format */}
+        {problem?.outputFormat && problem.outputFormat.length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold text-gray-900 mb-3 flex items-center">
+              <span className="w-1 h-6 bg-purple-600 mr-3 rounded"></span>
+              Output Format
+            </h2>
+            <ul className="space-y-2 bg-gray-50 rounded-lg p-5 border border-gray-200">
+              {problem.outputFormat.map((format, i) => (
+                <li key={i} className="flex items-start text-gray-700">
+                  <span className="text-purple-600 mr-3 mt-1">•</span>
+                  <span className="flex-1">{format}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* Examples */}
+        {problem?.examples?.length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+              <span className="w-1 h-6 bg-amber-600 mr-3 rounded"></span>
+              Examples
+            </h2>
+            <div className="space-y-6">
+              {problem.examples.map((ex, idx) => (
+                <div
+                  key={idx}
+                  className="border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm"
+                >
+                  <div className="bg-gray-100 px-5 py-3 border-b border-gray-200">
+                    <h3 className="text-sm font-semibold text-gray-900">
+                      Example {idx + 1}
+                    </h3>
+                  </div>
+                  <div className="p-5 space-y-4">
+                    <div>
+                      <p className="text-sm font-semibold text-gray-700 mb-2">
+                        Input:
+                      </p>
+                      <pre className="bg-gray-900 text-gray-100 rounded-md p-3 overflow-x-auto text-sm font-mono">
+                        <code>{ex.input}</code>
+                      </pre>
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-gray-700 mb-2">
+                        Output:
+                      </p>
+                      <pre className="bg-gray-900 text-gray-100 rounded-md p-3 overflow-x-auto text-sm font-mono">
+                        <code>{ex.output}</code>
+                      </pre>
+                    </div>
+                    {ex.explanation && (
+                      <div>
+                        <p className="text-sm font-semibold text-gray-700 mb-2">
+                          Explanation:
+                        </p>
+                        <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-md">
+                          <p className="text-sm text-gray-700 leading-relaxed">
+                            {ex.explanation}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Hints */}
+        {problem?.hints && problem.hints.length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+              <span className="w-1 h-6 bg-indigo-600 mr-3 rounded"></span>
+              Hints
+            </h2>
+            <div className="space-y-3">
+              {problem.hints.map((hint, i) => (
+                <div
+                  key={i}
+                  className="bg-indigo-50 border border-indigo-200 rounded-lg p-4"
+                >
+                  <p className="text-sm font-semibold text-indigo-900 mb-1">
+                    Hint {i + 1}
+                  </p>
+                  <p className="text-sm text-gray-700 leading-relaxed">{hint}</p>
+                </div>
+              ))}
+            </div>
+          </div>
         )}
       </div>
-
-      {/* Description */}
-      <div style={{ marginBottom: "24px" }}>
-        <MarkdownRenderer source={problem.description} />
-      </div>
-
-      {/* Constraints */}
-      {problem?.constraints && problem.constraints.length > 0 && (
-        <div style={{ marginBottom: "24px" }}>
-          <h2
-            style={{
-              fontSize: "18px",
-              fontWeight: "bold",
-              marginBottom: "12px",
-              color: "#000",
-            }}
-          >
-            Constraints:
-          </h2>
-          <ul
-            style={{
-              marginLeft: "20px",
-              paddingLeft: "20px",
-              listStyleType: "disc",
-            }}
-          >
-            {problem.constraints.map((constraint, i) => (
-              <li key={i} style={{ marginBottom: "8px", color: "#333" }}>
-                {constraint}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {/* Input Format */}
-      {problem?.inputFormat && problem.inputFormat.length > 0 && (
-        <div style={{ marginBottom: "24px" }}>
-          <h2
-            style={{
-              fontSize: "18px",
-              fontWeight: "bold",
-              marginBottom: "12px",
-              color: "#000",
-            }}
-          >
-            Input Format:
-          </h2>
-          <ul
-            style={{
-              marginLeft: "20px",
-              paddingLeft: "20px",
-              listStyleType: "disc",
-            }}
-          >
-            {problem.inputFormat.map((format, i) => (
-              <li key={i} style={{ marginBottom: "8px", color: "#333" }}>
-                {format}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {/* Output Format */}
-      {problem?.outputFormat && problem.outputFormat.length > 0 && (
-        <div style={{ marginBottom: "24px" }}>
-          <h2
-            style={{
-              fontSize: "18px",
-              fontWeight: "bold",
-              marginBottom: "12px",
-              color: "#000",
-            }}
-          >
-            Output Format:
-          </h2>
-          <ul
-            style={{
-              marginLeft: "20px",
-              paddingLeft: "20px",
-              listStyleType: "disc",
-            }}
-          >
-            {problem.outputFormat.map((format, i) => (
-              <li key={i} style={{ marginBottom: "8px", color: "#333" }}>
-                {format}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {/* Examples */}
-      {problem?.examples?.length > 0 && (
-        <div style={{ marginBottom: "24px" }}>
-          <h2
-            style={{
-              fontSize: "18px",
-              fontWeight: "bold",
-              marginBottom: "16px",
-              color: "#000",
-            }}
-          >
-            Examples:
-          </h2>
-          <div>
-            {problem.examples.map((ex, idx) => (
-              <div
-                key={idx}
-                style={{
-                  marginBottom: "20px",
-                  padding: "16px",
-                  backgroundColor: "#f9fafb",
-                  border: "1px solid #e5e7eb",
-                  borderRadius: "6px",
-                }}
-              >
-                <h3
-                  style={{
-                    fontSize: "14px",
-                    fontWeight: "600",
-                    marginBottom: "12px",
-                    color: "#000",
-                  }}
-                >
-                  Example {idx + 1}
-                </h3>
-                <div style={{ marginBottom: "12px" }}>
-                  <div
-                    style={{
-                      fontSize: "13px",
-                      fontWeight: "500",
-                      marginBottom: "8px",
-                      color: "#333",
-                    }}
-                  >
-                    Input:
-                  </div>
-                  <pre
-                    style={{
-                      backgroundColor: "#fff",
-                      border: "1px solid #e5e7eb",
-                      borderRadius: "4px",
-                      padding: "10px",
-                      overflow: "auto",
-                      fontSize: "12px",
-                      fontFamily: "monospace",
-                      color: "#333",
-                    }}
-                  >
-                    {ex.input}
-                  </pre>
-                </div>
-                <div style={{ marginBottom: "12px" }}>
-                  <div
-                    style={{
-                      fontSize: "13px",
-                      fontWeight: "500",
-                      marginBottom: "8px",
-                      color: "#333",
-                    }}
-                  >
-                    Output:
-                  </div>
-                  <pre
-                    style={{
-                      backgroundColor: "#fff",
-                      border: "1px solid #e5e7eb",
-                      borderRadius: "4px",
-                      padding: "10px",
-                      overflow: "auto",
-                      fontSize: "12px",
-                      fontFamily: "monospace",
-                      color: "#333",
-                    }}
-                  >
-                    {ex.output}
-                  </pre>
-                </div>
-                {ex.explanation && (
-                  <div>
-                    <div
-                      style={{
-                        fontSize: "13px",
-                        fontWeight: "500",
-                        marginBottom: "8px",
-                        color: "#333",
-                      }}
-                    >
-                      Explanation:
-                    </div>
-                    <p
-                      style={{
-                        fontSize: "13px",
-                        color: "#555",
-                        lineHeight: "1.5",
-                      }}
-                    >
-                      {ex.explanation}
-                    </p>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Hints */}
-      {problem?.hints && problem.hints.length > 0 && (
-        <div style={{ marginBottom: "24px" }}>
-          <h2
-            style={{
-              fontSize: "18px",
-              fontWeight: "bold",
-              marginBottom: "16px",
-              color: "#000",
-            }}
-          >
-            Hints:
-          </h2>
-          <div>
-            {problem.hints.map((hint, i) => (
-              <div
-                key={i}
-                style={{
-                  marginBottom: "12px",
-                  padding: "12px",
-                  backgroundColor: "#f0f9ff",
-                  border: "1px solid #bfdbfe",
-                  borderRadius: "4px",
-                  fontSize: "13px",
-                  color: "#1e40af",
-                }}
-              >
-                <strong>Hint {i + 1}:</strong> {hint}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

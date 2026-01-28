@@ -1,467 +1,399 @@
  
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
-import React, { useState, useEffect, useRef } from 'react'
-import { CodingProblem } from '@/types/assessment'
-import Editor from '@monaco-editor/react'
-import type { Monaco } from '@monaco-editor/react'
+import { useState, useEffect, useRef } from "react";
+import { CodingProblem } from "@/types/assessment";
+import type { Monaco } from "@monaco-editor/react";
+import { MonacoEditor } from "./MonacoEditor";
+import { Keyboard, RocketIcon, SaveIcon } from "lucide-react";
+import Code from "@mui/icons-material/Code";
+import KeyboardArrowDown from "@mui/icons-material/KeyboardArrowDown";
+import Check from "@mui/icons-material/Check";
+import CloudDone from "@mui/icons-material/CloudDone";
+import CloudUpload from "@mui/icons-material/CloudUpload";
+import RestartAlt from "@mui/icons-material/RestartAlt";
+import Save from "@mui/icons-material/Save";
+import { useAnswers } from "@/context/AnswersContext";
+import { Button, Tooltip } from "@mui/material";
+import { COLORS } from "@/constants/colors";
+import { Sync } from "@mui/icons-material";
+import { useAssessment } from "@/context/AssesmentContext";
+const generateStorageKey = (
+  problemId: string,
+  problemTitle: string,
+  language: string,
+): string => {
+  return `${problemId}|${problemTitle}|${language}`;
+};
 
-// interface StorageKey {
-//   problemId: string
-//   problemTitle: string
-//   language: string
-// }
-
-const generateStorageKey = (problemId: string, problemTitle: string, language: string): string => {
-  return `${problemId}|${problemTitle}|${language}`
-}
-
-const getStoredCode = (problemId: string, problemTitle: string, language: string): string => {
+const getStoredCode = (
+  problemId: string,
+  problemTitle: string,
+  language: string,
+): string => {
   try {
-    const key = generateStorageKey(problemId, problemTitle, language)
-    const stored = localStorage.getItem(`code:${key}`)
-    return stored || ''
+    const key = generateStorageKey(problemId, problemTitle, language);
+    const stored = localStorage.getItem(`code:${key}`);
+    return stored || "";
   } catch (e) {
-    console.warn('Failed to access localStorage:', e)
-    return ''
+    console.warn("Failed to access localStorage:", e);
+    return "";
   }
-}
+};
 
-const saveCode = (problemId: string, problemTitle: string, language: string, code: string): void => {
+const saveCode = (
+  problemId: string,
+  problemTitle: string,
+  language: string,
+  code: string,
+): void => {
   try {
-    const key = generateStorageKey(problemId, problemTitle, language)
-    localStorage.setItem(`code:${key}`, code)
+    const key = generateStorageKey(problemId, problemTitle, language);
+    localStorage.setItem(`code:${key}`, code);
   } catch (e) {
-    console.warn('Failed to save to localStorage:', e)
+    console.warn("Failed to save to localStorage:", e);
   }
-}
+};
 
 const getLanguageMode = (language: string): string => {
   const languageMap: Record<string, string> = {
-    python: 'python',
-    cpp: 'cpp',
-    c: 'c',
-    java: 'java',
-    javascript: 'javascript',
-    typescript: 'typescript',
-    go: 'go',
-    rust: 'rust',
-    csharp: 'csharp'
-  }
-  return languageMap[language] || 'plaintext'
-}
+    python: "python",
+    cpp: "cpp",
+    c: "c",
+    java: "java",
+    javascript: "javascript",
+    typescript: "typescript",
+    go: "go",
+    rust: "rust",
+    csharp: "csharp",
+  };
+  return languageMap[language] || "plaintext";
+};
 
-export default function ProblemEditor({ problem }: { problem: CodingProblem }) {
+export default function ProblemEditor({
+  problem,
+  sectionId,
+}: {
+  problem: CodingProblem;
+  sectionId: string;
+}) {
   const [selectedLanguage, setSelectedLanguage] = useState<string>(
-    problem.languagesSupported?.[0] || 'python'
-  )
-  const [code, setCode] = useState<string>('')
-  const [isSaved, setIsSaved] = useState<boolean>(true)
-  const [isLoading, setIsLoading] = useState<boolean>(true)
-  const editorRef = useRef<any>(null)
-  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+    problem.languagesSupported?.[0] || "python",
+  );
+  const [code, setCode] = useState<string>("");
+  const [isSaved, setIsSaved] = useState<boolean>(true);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const { solutionId } = useAssessment();
+  const { startExecution, isCodeRunning, isCodeSubmitting, startCodeSubmission } = useAnswers();
 
-  // Load code when component mounts or language changes
+  const handleSubmit = () => {
+    startCodeSubmission({
+      code,
+      lang: selectedLanguage,
+      problemId: problem._id,
+      sectionId: sectionId,
+      solutionId: solutionId,
+    });
+  };
+  const handleRun = () => {
+    startExecution({
+      code,
+      lang: selectedLanguage,
+      problemId: problem._id,
+      sectionId: sectionId,
+    });
+  };
   useEffect(() => {
-    setIsLoading(true)
-    const stored = getStoredCode(problem._id, problem.title, selectedLanguage)
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    setIsLoading(true);
+    const stored = getStoredCode(problem._id, problem.title, selectedLanguage);
     const signature = problem.functionSignature?.find(
-      (sig) => sig.language === selectedLanguage
-    )?.signature
+      (sig) => sig.language === selectedLanguage,
+    )?.signature;
 
-    const initialCode = stored || signature || `# Write your ${selectedLanguage} code here`
-    setCode(initialCode)
-    setIsSaved(true)
-    setIsLoading(false)
-  }, [selectedLanguage, problem._id, problem.title, problem.functionSignature])
+    const initialCode =
+      stored || signature || `# Write your ${selectedLanguage} code here`;
+    setCode(initialCode);
+    setIsSaved(true);
+    setIsLoading(false);
+  }, [selectedLanguage, problem._id, problem.title, problem.functionSignature]);
 
-  // Auto-save with debounce
   useEffect(() => {
     if (code && !isLoading) {
       if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current)
+        clearTimeout(saveTimeoutRef.current);
       }
 
       saveTimeoutRef.current = setTimeout(() => {
-        saveCode(problem._id, problem.title, selectedLanguage, code)
-        setIsSaved(true)
-      }, 1500)
+        saveCode(problem._id, problem.title, selectedLanguage, code);
+        setIsSaved(true);
+      }, 1500);
     }
 
     return () => {
       if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current)
+        clearTimeout(saveTimeoutRef.current);
       }
-    }
-  }, [code, selectedLanguage, problem._id, problem.title, isLoading])
+    };
+  }, [code, selectedLanguage, problem._id, problem.title, isLoading]);
 
   const handleLanguageChange = (language: string) => {
-    // Save current code before switching
     if (code && saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current)
-      saveCode(problem._id, problem.title, selectedLanguage, code)
+      clearTimeout(saveTimeoutRef.current);
+      saveCode(problem._id, problem.title, selectedLanguage, code);
     }
-    setSelectedLanguage(language)
-  }
+    setSelectedLanguage(language);
+    setIsDropdownOpen(false);
+  };
 
   const handleCodeChange = (value: string | undefined) => {
     if (value !== undefined) {
-      setCode(value)
-      setIsSaved(false)
+      setCode(value);
+      setIsSaved(false);
     }
-  }
+  };
 
-  const handleEditorMount = (editor: any, monaco: Monaco) => {
-    editorRef.current = editor
-
-    // Configure Monaco editor options
-    editor.updateOptions({
-      fontSize: 13,
-      lineHeight: 20,
-      wordWrap: 'on',
-      minimap: { enabled: false },
-      scrollBeyondLastLine: false,
-      cursorBlinking: 'blink',
-      smoothScrolling: true,
-      autoClosingBrackets: 'always',
-      autoClosingQuotes: 'always',
-      formatOnPaste: true,
-      formatOnType: true
-    })
-
-    // Add custom keybindings
-    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
-      saveCode(problem._id, problem.title, selectedLanguage, code)
-      setIsSaved(true)
-    })
-  }
-
+  const parentRef = useRef<HTMLDivElement>(null);
   const handleReset = () => {
     const signature = problem.functionSignature?.find(
-      (sig) => sig.language === selectedLanguage
-    )?.signature
-    const resetCode = signature || `# Write your ${selectedLanguage} code here`
-    setCode(resetCode)
-    setIsSaved(false)
-  }
+      (sig) => sig.language === selectedLanguage,
+    )?.signature;
+    const resetCode = signature || `# Write your ${selectedLanguage} code here`;
+    setCode(resetCode);
+    setIsSaved(false);
+  };
 
   const handleSaveManually = () => {
-    saveCode(problem._id, problem.title, selectedLanguage, code)
-    setIsSaved(true)
-  }
-
-  const currentSignature = problem.functionSignature?.find(
-    (sig) => sig.language === selectedLanguage
-  )?.signature
+    saveCode(problem._id, problem.title, selectedLanguage, code);
+    setIsSaved(true);
+  };
 
   return (
-    <div style={styles.container}>
-      {/* Header */}
-      <div style={styles.header}>
-        <div style={styles.headerLeft}>
-          <h2 style={styles.title}>Code Editor</h2>
-          <p style={styles.subtitle}>
-            Problem: <span style={{ fontWeight: '600', color: '#1f2937' }}>{problem.title}</span>
-          </p>
+    <div className="flex flex-col h-full bg-white overflow-hidden border-l border-gray-200">
+      <div className="flex items-center justify-between px-6 py-3 bg-gray-50 border-b border-gray-200">
+        <div className="relative" ref={dropdownRef}>
+          <button
+            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+            className="flex items-center gap-3 px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-semibold text-gray-900 hover:bg-gray-50 hover:border-gray-400 transition-all min-w-[160px] shadow-sm"
+          >
+            <Code className="text-gray-600" sx={{ fontSize: 18 }} />
+            <span className="flex-1 text-left">
+              {selectedLanguage.charAt(0).toUpperCase() +
+                selectedLanguage.slice(1)}
+            </span>
+            <KeyboardArrowDown
+              className={`text-gray-500 transition-transform ${
+                isDropdownOpen ? "rotate-180" : ""
+              }`}
+              sx={{ fontSize: 18 }}
+            />
+          </button>
+
+          {/* Dropdown Menu */}
+          {isDropdownOpen && (
+            <div className="absolute top-full left-0 mt-2 w-full bg-white border border-gray-200 rounded-lg shadow-lg z-50 overflow-hidden">
+              <div className="py-1">
+                {problem.languagesSupported?.map((lang) => (
+                  <button
+                    key={lang}
+                    onClick={() => handleLanguageChange(lang)}
+                    className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
+                      selectedLanguage === lang
+                        ? "bg-blue-50 text-blue-700 font-semibold"
+                        : "text-gray-700 hover:bg-gray-50"
+                    }`}
+                  >
+                    <span className="flex-1 text-left">
+                      {lang.charAt(0).toUpperCase() + lang.slice(1)}
+                    </span>
+                    {selectedLanguage === lang && (
+                      <Check className="text-blue-600" sx={{ fontSize: 16 }} />
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
-        <div style={styles.saveStatus}>
-          <span
-            style={{
-              ...styles.statusIndicator,
-              backgroundColor: isSaved ? '#10b981' : '#f59e0b'
+
+        <div className="flex items-center gap-3">
+          <Button
+            endIcon={
+              isCodeRunning ? (
+                <Sync
+                  sx={{ fontSize: 20, animation: "spin 1s linear infinite" }}
+                  className="animate-spin duration-150 ease-linear"
+                />
+              ) : null
+            }
+            onClick={handleRun}
+            variant="contained"
+            disabled={isCodeRunning}
+            sx={{
+              textTransform: "none",
+              fontSize: 14,
+              fontWeight: 500,
+              borderRadius: "5px",
+              background: "#16a349",
+              color: "white",
+              "&:hover": {
+                backgroundColor: "#16a349",
+              },
+              "&:disabled": {
+                color: "white",
+                cursor: "not-allowed",
+              },
             }}
-            title={isSaved ? 'All changes saved' : 'Auto-saving...'}
-          />
-          <span style={styles.statusText}>{isSaved ? 'All saved' : 'Saving...'}</span>
-        </div>
-      </div>
+          >
+            Run
+          </Button>
+          <Button
+            onClick={handleSubmit}
+            disabled={isCodeSubmitting}
+            endIcon={
+              isCodeSubmitting ? (
+                <Sync
+                  sx={{ fontSize: 20, animation: "spin 1s linear infinite" }}
+                  className="animate-spin duration-150 ease-linear"
+                />
+              ) : null
+            }
+            variant="contained"
+            sx={{
+              textTransform: "none",
+              fontSize: 14,
+              fontWeight: 500,
+              borderRadius: "5px",
+              background: "#16a349",
+              color: "white",
+              "&:hover": {
+                backgroundColor: "#16a349",
+              },
+            }}
+          >
+            Submit
+          </Button>
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-white rounded-full border border-gray-200">
+            {isSaved ? (
+              <CloudDone className="text-green-600" sx={{ fontSize: 18 }} />
+            ) : (
+              <CloudUpload
+                className="text-yellow-600 animate-pulse"
+                sx={{ fontSize: 18 }}
+              />
+            )}
+            <span className="text-xs font-semibold text-gray-700">
+              {isSaved ? "Saved" : "Saving..."}
+            </span>
+          </div>
 
-      {/* Language Selector */}
-      <div style={styles.languagePanel}>
-        <label style={styles.languageLabel}>Select Language:</label>
-        <div style={styles.languageButtonGroup}>
-          {problem.languagesSupported?.map((lang) => (
-            <button
-              key={lang}
-              onClick={() => handleLanguageChange(lang)}
-              style={{
-                ...styles.languageButton,
-                ...(selectedLanguage === lang
-                  ? styles.languageButtonActive
-                  : styles.languageButtonInactive)
-              }}
-            >
-              {lang.charAt(0).toUpperCase() + lang.slice(1)}
+          <Tooltip title="Reset">
+            <button onClick={handleReset}>
+              <RestartAlt className="text-gray-700" sx={{ fontSize: 18 }} />
             </button>
-          ))}
+          </Tooltip>
+
+          {/* <Tooltip title="Save">
+          <button
+            onClick={handleSaveManually}
+            disabled={isSaved}
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors border shadow-sm ${
+              isSaved
+                ? "bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200"
+                : "bg-blue-600 hover:bg-blue-700 text-white border-blue-600"
+            }`}
+            title="Ctrl+S or Cmd+S"
+          >
+            <Save sx={{ fontSize: 18 }} />
+          </button> */}
         </div>
       </div>
-
-      {/* Signature Display */}
-      {currentSignature && (
-        <div style={styles.signaturePanel}>
-          <p style={styles.signatureLabel}>Function Signature:</p>
-          <pre style={styles.signatureCode}>{currentSignature}</pre>
-        </div>
-      )}
-
-      {/* Monaco Editor */}
-      <div style={styles.editorWrapper}>
+      {/* -------------------------------------------------------------------
+                Monaco Editor
+      ------------------------------------------------------------------- */}
+      <div className="flex-1 overflow-hidden bg-white relative">
         {isLoading ? (
-          <div style={styles.loadingContainer}>
-            <p style={styles.loadingText}>Loading editor...</p>
+          <div className="flex items-center justify-center h-full">
+            <div className="flex flex-col items-center gap-3">
+              <div className="w-8 h-8 border-3 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+              <p className="text-sm text-gray-500 font-medium">
+                Loading editor...
+              </p>
+            </div>
           </div>
         ) : (
-          <Editor
-            height="100%"
-            language={getLanguageMode(selectedLanguage)}
+          <MonacoEditor
+            parentRef={parentRef}
             value={code}
-            onChange={handleCodeChange}
-            onMount={handleEditorMount}
-            theme="vs-light"
-            options={{
-              fontSize: 13,
-              lineHeight: 20,
-              wordWrap: 'on',
-              minimap: { enabled: false },
-              scrollBeyondLastLine: false,
-              cursorBlinking: 'blink',
-              smoothScrolling: true,
-              autoClosingBrackets: 'always',
-              autoClosingQuotes: 'always',
-              formatOnPaste: true,
-              formatOnType: true,
-              padding: { top: 16, bottom: 16 }
+            language={getLanguageMode(selectedLanguage)}
+            onChange={(value) => {
+              if (value === code) {
+                return;
+              }
+              handleCodeChange(value);
             }}
+            readOnly={false}
           />
         )}
       </div>
 
-      {/* Action Bar */}
-      <div style={styles.actionBar}>
-        <button
-          onClick={handleSaveManually}
-          disabled={isSaved}
-          style={{
-            ...styles.button,
-            ...styles.saveButton,
-            ...(isSaved ? styles.buttonDisabled : {})
-          }}
-          title="Ctrl+S or Cmd+S"
-        >
-          💾 Save Code
-        </button>
-        <button
-          onClick={handleReset}
-          style={{ ...styles.button, ...styles.resetButton }}
-          title="Reset to function signature"
-        >
-          🔄 Reset
-        </button>
-      </div>
+      {/* -------------------------------------------------------------------
+                Footer Section of Coding Environment
+      ------------------------------------------------------------------- */}
+      <div className="px-6 py-2.5 bg-amber-50 border-t border-amber-200">
+        <div className="flex items-center justify-between gap-4">
+          {/* Auto-save Info */}
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-100 rounded-md border border-amber-300">
+              <SaveIcon
+                className="w-3.5 h-3.5 text-amber-700"
+                style={{ fontSize: 14 }}
+              />
+              <span className="text-xs font-semibold text-amber-800">
+                Auto-save
+              </span>
+            </div>
+            <span className="text-xs text-amber-700">
+              Code saved as{" "}
+              <code className="bg-amber-100 px-1.5 py-0.5 rounded text-amber-800 font-mono text-[10px]">
+                {problem._id.substring(0, 8)}...{selectedLanguage}
+              </code>
+            </span>
+          </div>
 
-      {/* Storage Info */}
-      <div style={styles.storageInfo}>
-        <p style={styles.storageInfoText}>
-          💾 Your code is automatically saved to your browser's local storage with key:{' '}
-          <code style={styles.storageKey}>
-            {problem._id}|{problem.title}|{selectedLanguage}
-          </code>
-          <br />
-          📝 Changes auto-save after 1.5 seconds of inactivity. Press Ctrl+S (Cmd+S on Mac) to save manually.
-        </p>
+          {/* Keyboard Shortcuts */}
+          <div className="flex items-center gap-2">
+            <Keyboard className="text-amber-700" style={{ fontSize: 16 }} />
+            <span className="text-xs text-amber-700 font-medium">
+              Save manually:
+            </span>
+            <div className="flex items-center gap-1">
+              <kbd className="inline-flex items-center justify-center min-w-[28px] h-6 px-2 bg-amber-100 border border-amber-300 rounded text-xs font-semibold text-amber-800 shadow-sm">
+                Ctrl
+              </kbd>
+              <span className="text-amber-600">+</span>
+              <kbd className="inline-flex items-center justify-center min-w-[28px] h-6 px-2 bg-amber-100 border border-amber-300 rounded text-xs font-semibold text-amber-800 shadow-sm">
+                S
+              </kbd>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
-  )
-}
-
-const styles: Record<string, React.CSSProperties> = {
-  container: {
-    display: 'flex',
-    flexDirection: 'column',
-    height: '100%',
-    backgroundColor: '#f9fafb',
-    borderRadius: '8px',
-    overflow: 'hidden',
-    border: '1px solid #e5e7eb',
-    fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
-  },
-  header: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: '20px 24px',
-    backgroundColor: '#fff',
-    borderBottom: '1px solid #e5e7eb'
-  },
-  headerLeft: {
-    flex: 1
-  },
-  title: {
-    fontSize: '20px',
-    fontWeight: '700',
-    margin: '0 0 4px 0',
-    color: '#000'
-  },
-  subtitle: {
-    fontSize: '13px',
-    color: '#6b7280',
-    margin: '0'
-  },
-  saveStatus: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    padding: '8px 12px',
-    backgroundColor: '#f3f4f6',
-    borderRadius: '6px',
-    minWidth: '120px'
-  },
-  statusIndicator: {
-    width: '8px',
-    height: '8px',
-    borderRadius: '50%',
-    flexShrink: 0,
-    animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
-  },
-  statusText: {
-    fontSize: '12px',
-    fontWeight: '500',
-    color: '#374151'
-  },
-  languagePanel: {
-    padding: '16px 24px',
-    backgroundColor: '#fff',
-    borderBottom: '1px solid #e5e7eb'
-  },
-  languageLabel: {
-    display: 'block',
-    fontSize: '12px',
-    fontWeight: '600',
-    color: '#374151',
-    textTransform: 'uppercase',
-    letterSpacing: '0.5px',
-    marginBottom: '12px'
-  },
-  languageButtonGroup: {
-    display: 'flex',
-    gap: '8px',
-    flexWrap: 'wrap'
-  },
-  languageButton: {
-    padding: '8px 16px',
-    border: '1px solid #d1d5db',
-    borderRadius: '6px',
-    fontSize: '13px',
-    fontWeight: '500',
-    cursor: 'pointer',
-    transition: 'all 0.2s ease',
-    background: '#fff'
-  },
-  languageButtonActive: {
-    backgroundColor: '#3b82f6',
-    color: '#fff',
-    borderColor: '#3b82f6',
-    boxShadow: '0 0 0 3px rgba(59, 130, 246, 0.1)'
-  },
-  languageButtonInactive: {
-    color: '#374151',
-    backgroundColor: '#f9fafb'
-  },
-  signaturePanel: {
-    padding: '16px 24px',
-    backgroundColor: '#eff6ff',
-    borderBottom: '1px solid #bfdbfe',
-    borderTop: '1px solid #bfdbfe'
-  },
-  signatureLabel: {
-    fontSize: '12px',
-    fontWeight: '600',
-    color: '#1e40af',
-    textTransform: 'uppercase',
-    letterSpacing: '0.5px',
-    margin: '0 0 8px 0'
-  },
-  signatureCode: {
-    margin: '0',
-    padding: '12px',
-    backgroundColor: '#fff',
-    border: '1px solid #bfdbfe',
-    borderRadius: '4px',
-    fontSize: '12px',
-    fontFamily: "'Fira Code', 'Courier New', monospace",
-    color: '#1e40af',
-    overflow: 'auto',
-    maxHeight: '100px'
-  },
-  editorWrapper: {
-    flex: 1,
-    overflow: 'hidden',
-    backgroundColor: '#fff',
-    position: 'relative'
-  },
-  loadingContainer: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: '100%',
-    backgroundColor: '#fff'
-  },
-  loadingText: {
-    fontSize: '14px',
-    color: '#9ca3af'
-  },
-  actionBar: {
-    display: 'flex',
-    gap: '12px',
-    padding: '16px 24px',
-    backgroundColor: '#fff',
-    borderTop: '1px solid #e5e7eb'
-  },
-  button: {
-    padding: '10px 16px',
-    border: 'none',
-    borderRadius: '6px',
-    fontSize: '13px',
-    fontWeight: '600',
-    cursor: 'pointer',
-    transition: 'all 0.2s ease',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '6px'
-  },
-  saveButton: {
-    backgroundColor: '#3b82f6',
-    color: '#fff'
-  },
-  resetButton: {
-    backgroundColor: '#f3f4f6',
-    color: '#374151',
-    border: '1px solid #d1d5db'
-  },
-  buttonDisabled: {
-    opacity: 0.5,
-    cursor: 'not-allowed',
-    backgroundColor: '#e5e7eb',
-    color: '#9ca3af'
-  },
-  storageInfo: {
-    padding: '12px 24px',
-    backgroundColor: '#fef3c7',
-    borderTop: '1px solid #fcd34d',
-    fontSize: '12px',
-    color: '#92400e'
-  },
-  storageInfoText: {
-    margin: '0',
-    lineHeight: '1.5'
-  },
-  storageKey: {
-    backgroundColor: '#fff8dc',
-    padding: '2px 6px',
-    borderRadius: '3px',
-    fontFamily: "'Fira Code', 'Courier New', monospace",
-    fontSize: '11px',
-    color: '#b45309'
-  }
+  );
 }

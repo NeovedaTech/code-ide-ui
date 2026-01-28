@@ -33,11 +33,22 @@ export interface ExamSolution {
    Section Response (User's attempt on a section)
    ========================================================= */
 
+export interface codingAnswer {
+  [key: string]: {
+    code: string;
+    tokens: [string];
+  };
+}
+
+export interface quizAnswer {
+  [key: string]: string | string[];
+}
+
 export interface SectionResponse {
   sectionId: ObjectId;
   sectionType: "quiz" | "coding";
-  quizAnswers: unknown[];
-  codingAnswers: unknown[];
+  quizAnswers: quizAnswer[];
+  codingAnswers: codingAnswer[];
   totalQuestions: number;
   correctAnswers: number;
   startedAt: string;
@@ -105,6 +116,7 @@ export interface SectionMeta {
 export type QuizQuestion = TextQuestion | MCQQuestion | MSQQuestion;
 
 export interface BaseQuizQuestion {
+  _id: string;
   question: string;
   marks: number;
   category: "Text" | "MCQ" | "MSQ";
@@ -181,4 +193,14 @@ export interface TestCase {
 export interface FunctionSignature {
   language: string;
   signature: string;
+}
+
+
+export type SubmtiSectionResponse = {
+   solutionId: string;
+  sectionId: string;
+  autoSubmit?: boolean;
+  sectionType: string;
+  response: codingAnswer | quizAnswer;
+  current: number;
 }

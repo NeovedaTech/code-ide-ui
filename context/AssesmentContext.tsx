@@ -1,5 +1,5 @@
  
-/* eslint-disable @typescript-eslint/no-unused-vars */
+ 
 /* eslint-disable react-hooks/set-state-in-effect */
  
 "use client";
@@ -23,6 +23,7 @@ interface AssessmentContextType {
   currentSection: AssessmentSection | undefined;
   currSectionNumber: number;
   currResponse: SectionResponse | undefined;
+  Loading: boolean;
   hasStarted: boolean;
   hasSubmitted: boolean;
   solutionId: string;
@@ -108,7 +109,7 @@ export const AssessmentProvider: React.FC<AssessmentProviderProps> = ({
     setLoading(false);
     // If the assessment data is available, update the current section and section number.
     if (assesment) {
-      setCurrentSection(assesment.data.assesmentSnapshot[currSectionNumber]);
+      setCurrentSection(assesment.data.assesmentSnapshot[assesment.data.currSection]);
       setCurrSectionNumber(assesment.data.currSection);
       setHasStarted(assesment.data.hasAgreed);
       setSolutionId(assesment.data._id);
@@ -125,6 +126,7 @@ export const AssessmentProvider: React.FC<AssessmentProviderProps> = ({
         solutionId,
         assessmentId,
         currentSection,
+        Loading,
         currSectionNumber,
         hasStarted,
         hasSubmitted,

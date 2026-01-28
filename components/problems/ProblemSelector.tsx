@@ -1,4 +1,11 @@
 import { CodingProblem } from "@/types/assessment";
+import { Typography, Chip } from "@mui/material";
+import {
+  ExpandMore as ExpandMoreIcon,
+  Code as CodeIcon,
+  TipsAndUpdatesOutlined as TipsIcon,
+  CheckCircleOutline as ConstraintIcon,
+} from "@mui/icons-material";
 import React, { useState, useMemo, useEffect } from "react";
 
 interface ProblemSelectorProps {
@@ -7,42 +14,37 @@ interface ProblemSelectorProps {
   selectedId?: string;
 }
 
-// type DifficultyFilter = "all" | "easy" | "medium" | "hard";
-
 export default function ProblemSelector({
   problems,
   setProblemId,
   selectedId,
 }: ProblemSelectorProps) {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [difficultyFilter, setDifficultyFilter] = useState("all");
+  // const [searchQuery, setSearchQuery] = useState("");
+  // const [difficultyFilter, setDifficultyFilter] = useState("all");
   const [expandedProblemId, setExpandedProblemId] = useState<string | null>(
-    null
+    null,
   );
 
-  // Auto-expand the selected problem
   useEffect(() => {
     if (selectedId) {
       setExpandedProblemId(selectedId);
     }
   }, [selectedId]);
 
-  // Filter and search problems
-  const filteredProblems = useMemo(() => {
-    return problems.filter((problem) => {
-      const matchesSearch =
-        problem.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        problem.description?.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesDifficulty =
-        difficultyFilter === "all" ||
-        problem.difficulty?.toLowerCase() === difficultyFilter;
-      return matchesSearch && matchesDifficulty;
-    });
-  }, [problems, searchQuery, difficultyFilter]);
+  // const filteredProblems = useMemo(() => {
+  //   return problems.filter((problem) => {
+  //     const matchesSearch =
+  //       problem.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+  //       problem.description?.toLowerCase().includes(searchQuery.toLowerCase());
+  //     const matchesDifficulty =
+  //       difficultyFilter === "all" ||
+  //       problem.difficulty?.toLowerCase() === difficultyFilter;
+  //     return matchesSearch && matchesDifficulty;
+  //   });
+  // }, [problems, searchQuery, difficultyFilter]);
 
-  // Get problem stats
   const problemStats = useMemo(() => {
-    const stats = {
+    return {
       total: problems.length,
       easy: problems.filter((p) => p.difficulty?.toLowerCase() === "easy")
         .length,
@@ -51,659 +53,536 @@ export default function ProblemSelector({
       hard: problems.filter((p) => p.difficulty?.toLowerCase() === "hard")
         .length,
     };
-    return stats;
   }, [problems]);
 
   const getDifficultyColor = (difficulty?: string) => {
     switch (difficulty?.toLowerCase()) {
       case "easy":
         return {
-          bg: "#dcfce7",
-          border: "#86efac",
-          text: "#16a34a",
-          dot: "#22c55e",
+          bg: "bg-emerald-50",
+          border: "border-emerald-200",
+          text: "text-emerald-700",
+          dot: "bg-emerald-500",
         };
       case "medium":
         return {
-          bg: "#fef3c7",
-          border: "#fde047",
-          text: "#b45309",
-          dot: "#eab308",
+          bg: "bg-amber-50",
+          border: "border-amber-200",
+          text: "text-amber-700",
+          dot: "bg-amber-500",
         };
       case "hard":
         return {
-          bg: "#fee2e2",
-          border: "#fca5a5",
-          text: "#dc2626",
-          dot: "#ef4444",
+          bg: "bg-rose-50",
+          border: "border-rose-200",
+          text: "text-rose-700",
+          dot: "bg-rose-500",
         };
       default:
         return {
-          bg: "#f3f4f6",
-          border: "#d1d5db",
-          text: "#4b5563",
-          dot: "#9ca3af",
+          bg: "bg-slate-50",
+          border: "border-slate-200",
+          text: "text-slate-700",
+          dot: "bg-slate-500",
         };
     }
   };
 
   const handleProblemSelect = (id: string) => {
     if (id === selectedId) {
-      // Toggle if clicking the same problem
       setExpandedProblemId(expandedProblemId === id ? null : id);
     } else {
-      // Switch to new problem
       setProblemId(id);
     }
   };
 
   return (
-    <div style={styles.container}>
+    <div className="flex flex-col h-full bg-gradient-to-br from-slate-50 via-white to-slate-50 rounded-xl overflow-hidden border border-slate-200 shadow-lg">
       {/* Header */}
-      <div style={styles.header}>
-        <div style={styles.headerContent}>
-          <h2 style={styles.title}>Coding Problems</h2>
-          <p style={styles.subtitle}>
-            {filteredProblems.length} of {problems.length} problems
-          </p>
+      <div className="px-6 py-2 bg-white border-b border-slate-100 shadow-sm">
+        <div className="flex items-center gap-1 mb-0">
+          <CodeIcon sx={{ fontSize: 28, color: "#3b82f6" }} />
+          <Typography variant="h6" sx={{ fontWeight: 700, color: "#1e293b" }}>
+            Coding Problems
+          </Typography>
         </div>
-      </div>
-
-      {/* Stats Bar */}
-      <div style={styles.statsBar}>
-        <div style={styles.statItem}>
-          <span style={styles.statLabel}>Total:</span>
-          <span style={styles.statValue}>{problemStats.total}</span>
-        </div>
-        <div style={styles.statDivider}></div>
-        <div style={styles.statItem}>
-          <div
-            style={{
-              ...styles.statDot,
-              backgroundColor: "#22c55e",
-            }}
-          ></div>
-          <span style={styles.statLabel}>Easy:</span>
-          <span style={styles.statValue}>{problemStats.easy}</span>
-        </div>
-        <div style={styles.statItem}>
-          <div
-            style={{
-              ...styles.statDot,
-              backgroundColor: "#eab308",
-            }}
-          ></div>
-          <span style={styles.statLabel}>Medium:</span>
-          <span style={styles.statValue}>{problemStats.medium}</span>
-        </div>
-        <div style={styles.statItem}>
-          <div
-            style={{
-              ...styles.statDot,
-              backgroundColor: "#ef4444",
-            }}
-          ></div>
-          <span style={styles.statLabel}>Hard:</span>
-          <span style={styles.statValue}>{problemStats.hard}</span>
-        </div>
-      </div>
-
-      {/* Search and Filter Section */}
-      <div style={styles.filterSection}>
-        {/* Search Bar */}
-        <div style={styles.searchContainer}>
-          <span style={styles.searchIcon}>🔍</span>
-          <input
-            type="text"
-            placeholder="Search problems..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            style={styles.searchInput}
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery("")}
-              style={styles.clearButton}
-              title="Clear search"
-            >
-              ✕
-            </button>
-          )}
-        </div>
-
-        {/* Difficulty Filter */}
-        <div style={styles.filterButtons}>
-          {(["all", "easy", "medium", "hard"] as const).map((difficulty) => (
-            <button
-              key={difficulty}
-              onClick={() => setDifficultyFilter(difficulty)}
-              style={{
-                ...styles.filterButton,
-                ...(difficultyFilter === difficulty
-                  ? styles.filterButtonActive
-                  : styles.filterButtonInactive),
-              }}
-            >
-              {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}
-            </button>
-          ))}
-        </div>
+        <Typography
+          variant="caption"
+          sx={{ color: "#64748b", display: "block" }}
+        >
+          {problems.length} of {problemStats.total} problems
+        </Typography>
       </div>
 
       {/* Problems List */}
-      <div style={styles.problemsListContainer}>
-        {filteredProblems.length === 0 ? (
-          <div style={styles.emptyState}>
-            <div style={styles.emptyStateIcon}>🔎</div>
-            <p style={styles.emptyStateText}>No problems found</p>
-            <p style={styles.emptyStateSubtext}>
+      <div className="flex-1 overflow-auto px-6 py-4 bg-gradient-to-br from-slate-50 via-white to-slate-50">
+        {/* {filteredProblems.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-64 text-slate-400">
+            <SearchIcon sx={{ fontSize: 56, marginBottom: 2, opacity: 0.5 }} />
+            <Typography variant="subtitle1" sx={{ fontWeight: 600, color: "#475569", mb: 0.5 }}>
+              No problems found
+            </Typography>
+            <Typography variant="caption" sx={{ color: "#94a3b8" }}>
               Try adjusting your search or filters
-            </p>
+            </Typography>
           </div>
-        ) : (
-          <div style={styles.problemsList}>
-            {filteredProblems.map((problem) => {
-              const isSelected = selectedId === problem._id;
-              const colors = getDifficultyColor(problem.difficulty);
-              const isExpanded = expandedProblemId === problem._id;
+        ) : ( */}
+        <div className="flex flex-col gap-3">
+          {problems.map((problem) => {
+            const isSelected = selectedId === problem._id;
+            const isExpanded = expandedProblemId === problem._id;
+            const colors = getDifficultyColor(problem.difficulty);
 
-              return (
-                <div
-                  key={problem._id}
-                  style={{
-                    ...styles.problemCard,
-                    ...(isSelected ? styles.problemCardSelected : {}),
-                  }}
+            return (
+              <div
+                key={problem._id}
+                className={`bg-white border rounded-lg overflow-hidden transition-all duration-200 ${
+                  isSelected
+                    ? "border-blue-400 shadow-md ring-2 ring-blue-100 bg-gradient-to-r from-white to-blue-50"
+                    : "border-slate-200 hover:border-slate-300 hover:shadow-sm"
+                }`}
+              >
+                {/* Problem Header */}
+                <button
+                  onClick={() => handleProblemSelect(problem._id)}
+                  className="w-full px-5 py-4 text-left hover:bg-slate-50 transition-colors"
                 >
-                  <button
-                    onClick={() => handleProblemSelect(problem._id)}
-                    style={styles.problemCardButton}
-                  >
-                    <div style={styles.problemCardHeader}>
-                      <div style={styles.problemCardTitleSection}>
-                        <p style={styles.problemCardTitle}>{problem.title}</p>
-                      </div>
-                      <div style={styles.problemCardMeta}>
-                        <div
-                          style={{
-                            ...styles.problemDifficulty,
-                            backgroundColor: colors.bg,
-                            borderColor: colors.border,
-                            color: colors.text,
-                          }}
-                        >
-                          <div
-                            style={{
-                              ...styles.difficultyDot,
-                              backgroundColor: colors.dot,
-                            }}
-                          ></div>
-                          {problem.difficulty}
-                        </div>
-                        {problem.languagesSupported &&
-                          problem.languagesSupported.length > 0 && (
-                            <span style={styles.languageBadge}>
-                              {problem.languagesSupported.length} langs
-                            </span>
-                          )}
-                        <span style={styles.expandIcon}>
-                          {isExpanded ? "▼" : "▶"}
-                        </span>
-                      </div>
+                  <div className="flex justify-between items-start gap-4">
+                    <div className="flex-1">
+                      <Typography
+                        variant="subtitle2"
+                        sx={{
+                          fontWeight: 700,
+                          color: "#1e293b",
+                          marginBottom: 1,
+                          fontSize: "0.95rem",
+                        }}
+                      >
+                        {problem.title}
+                      </Typography>
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          color: "#64748b",
+                          lineHeight: 1.5,
+                          fontSize: "0.85rem",
+                        }}
+                      >
+                        {problem.description
+                          ? problem.description.substring(0, 140) +
+                            (problem.description.length > 140 ? "..." : "")
+                          : "No description available"}
+                      </Typography>
                     </div>
 
-                    {/* Problem Preview Description */}
-                    <p style={styles.problemPreview}>
-                      {problem.description
-                        ? problem.description.substring(0, 100) +
-                          (problem.description.length > 100 ? "..." : "")
-                        : "No description"}
-                    </p>
-                  </button>
+                    {/* Right Side Controls */}
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <Chip
+                        label={problem.difficulty || "Unknown"}
+                        size="small"
+                        icon={
+                          <div
+                            className={`w-2 h-2 rounded-full ${colors.dot}`}
+                          />
+                        }
+                        sx={{
+                          backgroundColor: colors.bg,
+                          borderColor: colors.border,
+                          color: colors.text,
+                          fontWeight: 600,
+                          fontSize: "0.75rem",
+                          height: "24px",
+                          border: `1px solid ${colors.border === "border-emerald-200" ? "#dcfce7" : colors.border === "border-amber-200" ? "#fef3c7" : colors.border === "border-rose-200" ? "#ffe4e6" : "#e2e8f0"}`,
+                          "& .MuiChip-icon": {
+                            marginLeft: "2px",
+                            fontSize: "0.5rem",
+                          },
+                        }}
+                      />
 
-                  {/* Expanded Details */}
-                  {isExpanded && (
-                    <div style={styles.problemDetails}>
-                      {/* Full Description */}
-                      {problem.description && (
-                        <div style={styles.detailSection}>
-                          <h4 style={styles.detailTitle}>Description</h4>
-                          <p style={styles.detailContent}>
-                            {problem.description}
-                          </p>
-                        </div>
-                      )}
-
-                      {/* Languages Supported */}
                       {problem.languagesSupported &&
                         problem.languagesSupported.length > 0 && (
-                          <div style={styles.detailSection}>
-                            <h4 style={styles.detailTitle}>Languages</h4>
-                            <div style={styles.languagesList}>
-                              {problem.languagesSupported.map((lang) => (
-                                <span
-                                  key={lang}
-                                  style={styles.languageTag}
-                                >
-                                  {lang.charAt(0).toUpperCase() + lang.slice(1)}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
+                          <Chip
+                            label={`${problem.languagesSupported.length}`}
+                            size="small"
+                            variant="outlined"
+                            icon={<CodeIcon sx={{ fontSize: "0.9rem" }} />}
+                            sx={{
+                              height: "24px",
+                              fontSize: "0.75rem",
+                              fontWeight: 500,
+                              borderColor: "#cbd5e1",
+                              color: "#64748b",
+                            }}
+                          />
                         )}
 
-                      {/* Function Signatures */}
-                      {problem.functionSignature &&
-                        problem.functionSignature.length > 0 && (
-                          <div style={styles.detailSection}>
-                            <h4 style={styles.detailTitle}>
-                              Function Signatures
-                            </h4>
-                            <div style={styles.signaturesContainer}>
-                              {problem.functionSignature.map((sig, idx) => (
-                                <div
-                                  key={idx}
-                                  style={styles.signatureItem}
+                      <ExpandMoreIcon
+                        sx={{
+                          color: "#94a3b8",
+                          transition: "transform 200ms",
+                          transform: isExpanded
+                            ? "rotate(180deg)"
+                            : "rotate(0deg)",
+                          fontSize: 22,
+                        }}
+                      />
+                    </div>
+                  </div>
+                </button>
+
+                {/* Expanded Details */}
+                {isExpanded && (
+                  <div className="px-5 py-4 bg-gradient-to-br from-slate-50 to-white border-t border-slate-100 space-y-5">
+                    {/* Full Description */}
+                    {problem.description && (
+                      <div>
+                        <Typography
+                          variant="overline"
+                          sx={{
+                            fontWeight: 700,
+                            color: "#475569",
+                            fontSize: "0.7rem",
+                            letterSpacing: "0.5px",
+                            display: "block",
+                            marginBottom: 1,
+                          }}
+                        >
+                          Description
+                        </Typography>
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            color: "#334155",
+                            lineHeight: 1.6,
+                            fontSize: "0.85rem",
+                          }}
+                        >
+                          {problem.description}
+                        </Typography>
+                      </div>
+                    )}
+
+                    {/* Languages Supported */}
+                    {problem.languagesSupported &&
+                      problem.languagesSupported.length > 0 && (
+                        <div>
+                          <Typography
+                            variant="overline"
+                            sx={{
+                              fontWeight: 700,
+                              color: "#475569",
+                              fontSize: "0.7rem",
+                              letterSpacing: "0.5px",
+                              display: "block",
+                              marginBottom: 1.5,
+                            }}
+                          >
+                            Languages Supported
+                          </Typography>
+                          <div className="flex flex-wrap gap-2">
+                            {problem.languagesSupported.map((lang) => (
+                              <Chip
+                                key={lang}
+                                label={
+                                  lang.charAt(0).toUpperCase() + lang.slice(1)
+                                }
+                                size="small"
+                                variant="outlined"
+                                sx={{
+                                  backgroundColor: "#eff6ff",
+                                  borderColor: "#bfdbfe",
+                                  color: "#1e40af",
+                                  fontWeight: 500,
+                                  fontSize: "0.8rem",
+                                  height: "28px",
+                                }}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                    {/* Function Signatures */}
+                    {problem.functionSignature &&
+                      problem.functionSignature.length > 0 && (
+                        <div>
+                          <Typography
+                            variant="overline"
+                            sx={{
+                              fontWeight: 700,
+                              color: "#475569",
+                              fontSize: "0.7rem",
+                              letterSpacing: "0.5px",
+                              display: "block",
+                              marginBottom: 1.5,
+                            }}
+                          >
+                            Function Signatures
+                          </Typography>
+                          <div className="space-y-3">
+                            {problem.functionSignature.map((sig, idx) => (
+                              <div key={idx}>
+                                <Typography
+                                  variant="caption"
+                                  sx={{
+                                    fontWeight: 700,
+                                    color: "#64748b",
+                                    fontSize: "0.7rem",
+                                    letterSpacing: "0.3px",
+                                    textTransform: "uppercase",
+                                  }}
                                 >
-                                  <span style={styles.signatureLanguage}>
-                                    {sig.language.toUpperCase()}
-                                  </span>
-                                  <pre style={styles.signatureCode}>
-                                    {sig.signature}
+                                  {sig.language}
+                                </Typography>
+                                <pre className="bg-slate-900 text-slate-100 rounded-md p-3 overflow-x-auto text-xs font-mono border border-slate-700 mt-1 leading-relaxed">
+                                  <code>{sig.signature}</code>
+                                </pre>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                    {/* Constraints */}
+                    {problem.constraints && problem.constraints.length > 0 && (
+                      <div>
+                        <Typography
+                          variant="overline"
+                          sx={{
+                            fontWeight: 700,
+                            color: "#475569",
+                            fontSize: "0.7rem",
+                            letterSpacing: "0.5px",
+                            display: "block",
+                            marginBottom: 1.5,
+                          }}
+                        >
+                          Constraints
+                        </Typography>
+                        <ul className="space-y-2 pl-5">
+                          {problem.constraints.map((constraint, idx) => (
+                            <li
+                              key={idx}
+                              className="text-sm text-slate-700 leading-relaxed flex gap-2"
+                            >
+                              <ConstraintIcon
+                                sx={{
+                                  fontSize: 16,
+                                  color: "#0ea5e9",
+                                  flexShrink: 0,
+                                  marginTop: "2px",
+                                }}
+                              />
+                              <span className="text-xs">{constraint}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Examples */}
+                    {problem.examples && problem.examples.length > 0 && (
+                      <div>
+                        <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg border border-blue-100 mb-3">
+                          <CodeIcon
+                            sx={{
+                              color: "#0284c7",
+                              fontSize: 20,
+                              flexShrink: 0,
+                            }}
+                          />
+                          <div>
+                            <Typography
+                              variant="overline"
+                              sx={{
+                                fontWeight: 700,
+                                color: "#0c4a6e",
+                                fontSize: "0.7rem",
+                                letterSpacing: "0.5px",
+                                display: "block",
+                              }}
+                            >
+                              Examples
+                            </Typography>
+                            <Typography
+                              variant="caption"
+                              sx={{
+                                color: "#0c4a6e",
+                                fontWeight: 500,
+                                fontSize: "0.8rem",
+                              }}
+                            >
+                              {problem.examples.length} example
+                              {problem.examples.length !== 1 ? "s" : ""}{" "}
+                              provided
+                            </Typography>
+                          </div>
+                        </div>
+                        <div className="space-y-3">
+                          {problem.examples.map((example, idx) => (
+                            <div
+                              key={idx}
+                              className="p-3 bg-slate-50 rounded-lg border border-slate-200"
+                            >
+                              <Typography
+                                variant="caption"
+                                sx={{
+                                  fontWeight: 700,
+                                  color: "#475569",
+                                  fontSize: "0.7rem",
+                                  letterSpacing: "0.3px",
+                                  textTransform: "uppercase",
+                                  display: "block",
+                                  marginBottom: 1,
+                                }}
+                              >
+                                Example {idx + 1}
+                              </Typography>
+                              {example.input && (
+                                <div className="mb-2">
+                                  <Typography
+                                    variant="caption"
+                                    sx={{
+                                      color: "#64748b",
+                                      fontWeight: 600,
+                                      fontSize: "0.75rem",
+                                    }}
+                                  >
+                                    Input:
+                                  </Typography>
+                                  <pre className="bg-white text-slate-800 rounded p-2 overflow-x-auto text-xs font-mono border border-slate-300 mt-1">
+                                    <code>
+                                      {typeof example.input === "string"
+                                        ? example.input
+                                        : JSON.stringify(
+                                            example.input,
+                                            null,
+                                            2,
+                                          )}
+                                    </code>
                                   </pre>
                                 </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                      {/* Constraints */}
-                      {problem.constraints &&
-                        problem.constraints.length > 0 && (
-                          <div style={styles.detailSection}>
-                            <h4 style={styles.detailTitle}>Constraints</h4>
-                            <ul style={styles.constraintsList}>
-                              {problem.constraints.map(
-                                (constraint, idx) => (
-                                  <li key={idx} style={styles.constraintItem}>
-                                    {constraint}
-                                  </li>
-                                )
                               )}
-                            </ul>
+                              {example.output && (
+                                <div>
+                                  <Typography
+                                    variant="caption"
+                                    sx={{
+                                      color: "#64748b",
+                                      fontWeight: 600,
+                                      fontSize: "0.75rem",
+                                    }}
+                                  >
+                                    Output:
+                                  </Typography>
+                                  <pre className="bg-white text-slate-800 rounded p-2 overflow-x-auto text-xs font-mono border border-slate-300 mt-1">
+                                    <code>
+                                      {typeof example.output === "string"
+                                        ? example.output
+                                        : JSON.stringify(
+                                            example.output,
+                                            null,
+                                            2,
+                                          )}
+                                    </code>
+                                  </pre>
+                                </div>
+                              )}
+                              {example.explanation && (
+                                <div className="mt-2 pt-2 border-t border-slate-200">
+                                  <Typography
+                                    variant="caption"
+                                    sx={{
+                                      color: "#475569",
+                                      fontSize: "0.8rem",
+                                      fontStyle: "italic",
+                                    }}
+                                  >
+                                    {example.explanation}
+                                  </Typography>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Hints */}
+                    {problem.hints && problem.hints.length > 0 && (
+                      <div>
+                        <div className="flex items-center gap-3 p-3 bg-amber-50 rounded-lg border border-amber-100 mb-3">
+                          <TipsIcon
+                            sx={{
+                              color: "#b45309",
+                              fontSize: 20,
+                              flexShrink: 0,
+                            }}
+                          />
+                          <div>
+                            <Typography
+                              variant="overline"
+                              sx={{
+                                fontWeight: 700,
+                                color: "#78350f",
+                                fontSize: "0.7rem",
+                                letterSpacing: "0.5px",
+                                display: "block",
+                              }}
+                            >
+                              Help Available
+                            </Typography>
+                            <Typography
+                              variant="caption"
+                              sx={{
+                                color: "#78350f",
+                                fontWeight: 500,
+                                fontSize: "0.8rem",
+                              }}
+                            >
+                              {problem.hints.length} hint
+                              {problem.hints.length !== 1 ? "s" : ""} available
+                            </Typography>
                           </div>
-                        )}
-
-                      {/* Examples Count */}
-                      {problem.examples && problem.examples.length > 0 && (
-                        <div style={styles.detailSection}>
-                          <h4 style={styles.detailTitle}>Examples</h4>
-                          <p style={styles.examplesCount}>
-                            📝 {problem.examples.length} example
-                            {problem.examples.length !== 1 ? "s" : ""}
-                          </p>
                         </div>
-                      )}
-
-                      {/* Hints Count */}
-                      {problem.hints && problem.hints.length > 0 && (
-                        <div style={styles.detailSection}>
-                          <h4 style={styles.detailTitle}>Help</h4>
-                          <p style={styles.hintsCount}>
-                            💡 {problem.hints.length} hint
-                            {problem.hints.length !== 1 ? "s" : ""} available
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
+                        <ul className="space-y-2">
+                          {problem.hints.map((hint, idx) => (
+                            <li
+                              key={idx}
+                              className="flex gap-2 p-3 bg-amber-50 rounded-lg border border-amber-100"
+                            >
+                              <TipsIcon
+                                sx={{
+                                  color: "#b45309",
+                                  fontSize: 18,
+                                  flexShrink: 0,
+                                  marginTop: "2px",
+                                }}
+                              />
+                              <Typography
+                                variant="body2"
+                                sx={{
+                                  color: "#78350f",
+                                  fontSize: "0.85rem",
+                                  lineHeight: 1.5,
+                                }}
+                              >
+                                {hint}
+                              </Typography>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        {/* )} */}
       </div>
     </div>
   );
 }
-
-const styles: Record<string, React.CSSProperties> = {
-  container: {
-    display: "flex",
-    flexDirection: "column",
-    height: "100%",
-    backgroundColor: "#f9fafb",
-    borderRadius: "8px",
-    overflow: "hidden",
-    border: "1px solid #e5e7eb",
-    fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-  },
-  header: {
-    padding: "24px",
-    backgroundColor: "#fff",
-    borderBottom: "1px solid #e5e7eb",
-  },
-  headerContent: {},
-  title: {
-    fontSize: "24px",
-    fontWeight: "700",
-    margin: "0 0 4px 0",
-    color: "#000",
-  },
-  subtitle: {
-    fontSize: "13px",
-    color: "#6b7280",
-    margin: "0",
-  },
-  statsBar: {
-    display: "flex",
-    alignItems: "center",
-    gap: "16px",
-    padding: "12px 24px",
-    backgroundColor: "#fff",
-    borderBottom: "1px solid #e5e7eb",
-    fontSize: "13px",
-  },
-  statItem: {
-    display: "flex",
-    alignItems: "center",
-    gap: "6px",
-  },
-  statDot: {
-    width: "8px",
-    height: "8px",
-    borderRadius: "50%",
-    flexShrink: 0,
-  },
-  statLabel: {
-    color: "#6b7280",
-    fontWeight: "500",
-  },
-  statValue: {
-    color: "#1f2937",
-    fontWeight: "700",
-  },
-  statDivider: {
-    width: "1px",
-    height: "20px",
-    backgroundColor: "#e5e7eb",
-  },
-  filterSection: {
-    padding: "16px 24px",
-    backgroundColor: "#fff",
-    borderBottom: "1px solid #e5e7eb",
-    display: "flex",
-    gap: "16px",
-    alignItems: "center",
-  },
-  searchContainer: {
-    position: "relative",
-    flex: 1,
-    display: "flex",
-    alignItems: "center",
-  },
-  searchIcon: {
-    position: "absolute",
-    left: "12px",
-    fontSize: "16px",
-    color: "#9ca3af",
-  },
-  searchInput: {
-    width: "100%",
-    padding: "10px 12px 10px 36px",
-    border: "1px solid #d1d5db",
-    borderRadius: "6px",
-    fontSize: "13px",
-    fontFamily: "inherit",
-    outline: "none",
-    transition: "all 0.2s ease",
-    backgroundColor: "#f9fafb",
-  },
-  clearButton: {
-    position: "absolute",
-    right: "12px",
-    background: "none",
-    border: "none",
-    fontSize: "16px",
-    color: "#9ca3af",
-    cursor: "pointer",
-    padding: "4px 8px",
-    transition: "color 0.2s ease",
-  },
-  filterButtons: {
-    display: "flex",
-    gap: "8px",
-    flexWrap: "wrap",
-  },
-  filterButton: {
-    padding: "8px 14px",
-    border: "1px solid #d1d5db",
-    borderRadius: "6px",
-    fontSize: "12px",
-    fontWeight: "600",
-    cursor: "pointer",
-    transition: "all 0.2s ease",
-    backgroundColor: "#f9fafb",
-    color: "#374151",
-    whiteSpace: "nowrap",
-  },
-  filterButtonActive: {
-    backgroundColor: "#3b82f6",
-    borderColor: "#3b82f6",
-    color: "#fff",
-  },
-  filterButtonInactive: {
-    backgroundColor: "#f9fafb",
-    color: "#374151",
-  },
-  problemsListContainer: {
-    flex: 1,
-    overflow: "auto",
-    padding: "16px 24px",
-    backgroundColor: "#f9fafb",
-  },
-  problemsList: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "12px",
-  },
-  problemCard: {
-    backgroundColor: "#fff",
-    border: "1px solid #e5e7eb",
-    borderRadius: "6px",
-    overflow: "hidden",
-    transition: "all 0.2s ease",
-  },
-  problemCardSelected: {
-    boxShadow: "0 0 0 3px rgba(59, 130, 246, 0.1)",
-    borderColor: "#3b82f6",
-  },
-  problemCardButton: {
-    width: "100%",
-    background: "none",
-    border: "none",
-    padding: "16px",
-    textAlign: "left",
-    cursor: "pointer",
-    transition: "background-color 0.2s ease",
-  },
-  problemCardHeader: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: "8px",
-  },
-  problemCardTitleSection: {
-    flex: 1,
-    display: "flex",
-    alignItems: "center",
-    gap: "12px",
-  },
-  problemCardTitle: {
-    fontSize: "15px",
-    fontWeight: "600",
-    margin: "0",
-    color: "#000",
-  },
-  problemDifficulty: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: "6px",
-    padding: "4px 10px",
-    borderRadius: "12px",
-    border: "1px solid",
-    fontSize: "11px",
-    fontWeight: "600",
-    whiteSpace: "nowrap",
-    flexShrink: 0,
-  },
-  difficultyDot: {
-    width: "6px",
-    height: "6px",
-    borderRadius: "50%",
-    flexShrink: 0,
-  },
-  problemCardMeta: {
-    display: "flex",
-    alignItems: "center",
-    gap: "12px",
-  },
-  languageBadge: {
-    fontSize: "12px",
-    color: "#6b7280",
-    fontWeight: "500",
-    backgroundColor: "#f3f4f6",
-    padding: "4px 8px",
-    borderRadius: "4px",
-  },
-  expandIcon: {
-    fontSize: "12px",
-    color: "#9ca3af",
-    transition: "transform 0.2s ease",
-  },
-  problemPreview: {
-    margin: "0",
-    fontSize: "13px",
-    color: "#6b7280",
-    lineHeight: "1.5",
-  },
-  problemDetails: {
-    padding: "16px",
-    backgroundColor: "#f9fafb",
-    borderTop: "1px solid #e5e7eb",
-    display: "flex",
-    flexDirection: "column",
-    gap: "16px",
-  },
-  detailSection: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "8px",
-  },
-  detailTitle: {
-    margin: "0",
-    fontSize: "12px",
-    fontWeight: "700",
-    color: "#374151",
-    textTransform: "uppercase",
-    letterSpacing: "0.5px",
-  },
-  detailContent: {
-    margin: "0",
-    fontSize: "13px",
-    color: "#4b5563",
-    lineHeight: "1.6",
-  },
-  languagesList: {
-    display: "flex",
-    gap: "8px",
-    flexWrap: "wrap",
-  },
-  languageTag: {
-    display: "inline-block",
-    padding: "4px 10px",
-    backgroundColor: "#eff6ff",
-    color: "#1e40af",
-    borderRadius: "4px",
-    fontSize: "12px",
-    fontWeight: "500",
-    border: "1px solid #bfdbfe",
-  },
-  signaturesContainer: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "10px",
-  },
-  signatureItem: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "6px",
-  },
-  signatureLanguage: {
-    fontSize: "10px",
-    fontWeight: "700",
-    color: "#6b7280",
-    textTransform: "uppercase",
-    letterSpacing: "0.5px",
-  },
-  signatureCode: {
-    margin: "0",
-    padding: "8px 10px",
-    backgroundColor: "#fff",
-    border: "1px solid #e5e7eb",
-    borderRadius: "4px",
-    fontSize: "11px",
-    fontFamily: "'Fira Code', 'Courier New', monospace",
-    color: "#374151",
-    overflow: "auto",
-    maxHeight: "80px",
-  },
-  constraintsList: {
-    margin: "0",
-    paddingLeft: "20px",
-    display: "flex",
-    flexDirection: "column",
-    gap: "4px",
-  },
-  constraintItem: {
-    margin: "0",
-    fontSize: "13px",
-    color: "#4b5563",
-    lineHeight: "1.5",
-  },
-  examplesCount: {
-    margin: "0",
-    fontSize: "13px",
-    color: "#4b5563",
-    fontWeight: "500",
-  },
-  hintsCount: {
-    margin: "0",
-    fontSize: "13px",
-    color: "#4b5563",
-    fontWeight: "500",
-  },
-  emptyState: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    height: "300px",
-    color: "#9ca3af",
-  },
-  emptyStateIcon: {
-    fontSize: "48px",
-    margin: "0 0 12px 0",
-  },
-  emptyStateText: {
-    margin: "0 0 4px 0",
-    fontSize: "16px",
-    fontWeight: "600",
-    color: "#6b7280",
-  },
-  emptyStateSubtext: {
-    margin: "0",
-    fontSize: "13px",
-    color: "#9ca3af",
-  },
-};
