@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   evalCode,
   getAssesment,
+  getSolutionById,
   startAssessment,
   submitCode,
   submitSection,
@@ -45,14 +46,14 @@ export const useStartTest = () => {
 export const useRunCode = () => {
   return useMutation({
     mutationFn: evalCode,
-    onSuccess: () => {},
+    onSuccess: () => { },
   });
 };
 
 export const useSubmitCode = () => {
   return useMutation({
     mutationFn: submitCode,
-    onSuccess: () => {},
+    onSuccess: () => { },
   });
 };
 
@@ -61,6 +62,16 @@ export const useSubmitCode = () => {
 export const useSubmitSection = () => {
   return useMutation({
     mutationFn: submitSection,
-    onSuccess: () => {},
+    onSuccess: () => { },
   });
 };
+
+export const useAssessmentBySolutionId = ({ solutionId }: {
+  solutionId: string
+}) => {
+  return useQuery({
+    queryKey: ['solution', solutionId],
+    queryFn: () => getSolutionById(solutionId),
+    enabled: !!solutionId
+  })
+}

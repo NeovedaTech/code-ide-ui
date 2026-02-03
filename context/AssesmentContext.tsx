@@ -1,7 +1,7 @@
- 
- 
+
+
 /* eslint-disable react-hooks/set-state-in-effect */
- 
+
 "use client";
 import { useGetAssesment } from "@/hooks/AssesmentApi";
 import { AssessmentSection, SectionResponse } from "@/types/assessment";
@@ -26,7 +26,10 @@ interface AssessmentContextType {
   Loading: boolean;
   hasStarted: boolean;
   hasSubmitted: boolean;
+  assessmentLoading: boolean;
+  assessmentError: any;
   solutionId: string;
+  isSectionDone: boolean;
 }
 /**
  * @const AssessmentContext
@@ -70,11 +73,17 @@ export const AssessmentProvider: React.FC<AssessmentProviderProps> = ({
     SectionResponse | undefined
   >();
   const [solutionId, setSolutionId] = useState<string>("");
+
+
+  // / const {isAuthenticated} = useUser();
+
+  // if(!isA ) return to binarykeeda.com
   // State to hold the current section number.
   const [currSectionNumber, setCurrSectionNumber] = useState<number>(1);
   const [hasStarted, setHasStarted] = useState<boolean>(false);
   const [hasSubmitted, setHasSubmitted] = useState<boolean>(false);
   const [Loading, setLoading] = useState<boolean>(false);
+  const [isSectionDone, setIsSectionDone] = useState(false);
   // Custom hook to fetch assessment data from the API.
   const {
     data: assesment,
@@ -94,7 +103,7 @@ export const AssessmentProvider: React.FC<AssessmentProviderProps> = ({
    * useEffect hook to update the current section when the assessment data changes.
    * This runs when the component mounts and whenever the assessment data, loading state, or error state changes.
    */
-   
+
   useEffect(() => {
     // Don't do anything while the assessment is loading.
     if (assessmentLoading) {
@@ -109,12 +118,23 @@ export const AssessmentProvider: React.FC<AssessmentProviderProps> = ({
     setLoading(false);
     // If the assessment data is available, update the current section and section number.
     if (assesment) {
-      setCurrentSection(assesment.data.assesmentSnapshot[assesment.data.currSection]);
-      setCurrSectionNumber(assesment.data.currSection);
+      const curr = assesment.data.currSection
+      const section = assesment.data.assesmentSnapshot[curr];
+      const response = assesment.data.response[curr]
+      setCurrentSection(section);
+      setCurrSectionNumber(curr);
       setHasStarted(assesment.data.hasAgreed);
       setSolutionId(assesment.data._id);
       setHasSubmitted(assesment.data.isSubmitted);
-      setCurrResponse(assesment.data.response[assesment?.data.currSection]);
+      setCurrResponse(response);
+
+
+      if (!assesment.data.isSubmitted && section.type === "coding") {
+
+        const currSolution = response.codingAnswers[0] as {};
+        setIsSectionDone(section.problems.length === Object.keys(currSolution ?? {})?.length)
+      }
+      // setIsSectionDone(assesment.data)
     }
   }, [assesment, assessmentLoading, assessmentError]);
 
@@ -126,8 +146,11 @@ export const AssessmentProvider: React.FC<AssessmentProviderProps> = ({
         solutionId,
         assessmentId,
         currentSection,
+        assessmentLoading,
         Loading,
         currSectionNumber,
+        isSectionDone,
+        assessmentError,
         hasStarted,
         hasSubmitted,
       }}

@@ -47,7 +47,7 @@ export interface quizAnswer {
 export interface SectionResponse {
   sectionId: ObjectId;
   sectionType: "quiz" | "coding";
-  quizAnswers: quizAnswer[];
+  quizAnswers:quizAnswer[];
   codingAnswers: codingAnswer[];
   totalQuestions: number;
   correctAnswers: number;
@@ -197,7 +197,7 @@ export interface FunctionSignature {
 
 
 export type SubmtiSectionResponse = {
-   solutionId: string;
+  solutionId: string;
   sectionId: string;
   autoSubmit?: boolean;
   sectionType: string;

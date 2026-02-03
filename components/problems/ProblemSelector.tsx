@@ -7,6 +7,9 @@ import {
   CheckCircleOutline as ConstraintIcon,
 } from "@mui/icons-material";
 import React, { useState, useMemo, useEffect } from "react";
+import { MarkdownRenderer } from "./ProbelmDescription";
+import { useAssessment } from "@/context/AssesmentContext";
+import { COLORS } from "@/constants/colors";
 
 interface ProblemSelectorProps {
   problems: CodingProblem[];
@@ -24,6 +27,7 @@ export default function ProblemSelector({
   const [expandedProblemId, setExpandedProblemId] = useState<string | null>(
     null,
   );
+  const { currResponse } = useAssessment();
 
   useEffect(() => {
     if (selectedId) {
@@ -129,23 +133,31 @@ export default function ProblemSelector({
         ) : ( */}
         <div className="flex flex-col gap-3">
           {problems.map((problem) => {
-            const isSelected = selectedId === problem._id;
+            const isSubmitted = currResponse?.codingAnswers[0]?.[problem?._id];
+            const isSelected = selectedId === problem._id
             const isExpanded = expandedProblemId === problem._id;
             const colors = getDifficultyColor(problem.difficulty);
-
             return (
               <div
                 key={problem._id}
-                className={`bg-white border rounded-lg overflow-hidden transition-all duration-200 ${
-                  isSelected
-                    ? "border-blue-400 shadow-md ring-2 ring-blue-100 bg-gradient-to-r from-white to-blue-50"
-                    : "border-slate-200 hover:border-slate-300 hover:shadow-sm"
-                }`}
+                className={`bg-white relative hover:shadow-md border rounded-lg overflow-hidden transition-all duration-200 ${isSelected
+                  ? "border-blue-400 shadow-md ring-2 ring-blue-100 bg-gradient-to-r from-white to-blue-50"
+                  : "border-slate-200 "
+                  }`}
               >
                 {/* Problem Header */}
+                {
+                  isSubmitted &&
+                  <div className="absolute top-0 left-0  w-32 h-32 overflow-hidden">
+                    <div className={`absolute top-2 -left-10  bg-green-500 text-white text-center text-xs font-bold py-1 pl-9 pr-14 transform -rotate-45 shadow-md`}>
+                      Submitted
+                    </div>
+                  </div>
+                }
+
                 <button
                   onClick={() => handleProblemSelect(problem._id)}
-                  className="w-full px-5 py-4 text-left hover:bg-slate-50 transition-colors"
+                  className="w-full px-5 py-4 text-left  transition-colors"
                 >
                   <div className="flex justify-between items-start gap-4">
                     <div className="flex-1">
@@ -160,7 +172,7 @@ export default function ProblemSelector({
                       >
                         {problem.title}
                       </Typography>
-                      <Typography
+                      {/* <Typography
                         variant="body2"
                         sx={{
                           color: "#64748b",
@@ -172,7 +184,7 @@ export default function ProblemSelector({
                           ? problem.description.substring(0, 140) +
                             (problem.description.length > 140 ? "..." : "")
                           : "No description available"}
-                      </Typography>
+                      </Typography> */}
                     </div>
 
                     {/* Right Side Controls */}
@@ -235,7 +247,7 @@ export default function ProblemSelector({
                 {isExpanded && (
                   <div className="px-5 py-4 bg-gradient-to-br from-slate-50 to-white border-t border-slate-100 space-y-5">
                     {/* Full Description */}
-                    {problem.description && (
+                    {/* {problem.description && (
                       <div>
                         <Typography
                           variant="overline"
@@ -261,7 +273,8 @@ export default function ProblemSelector({
                           {problem.description}
                         </Typography>
                       </div>
-                    )}
+                    )} */}
+                    <MarkdownRenderer source={problem.description} />
 
                     {/* Languages Supported */}
                     {problem.languagesSupported &&
@@ -304,7 +317,7 @@ export default function ProblemSelector({
                       )}
 
                     {/* Function Signatures */}
-                    {problem.functionSignature &&
+                    {/* {problem.functionSignature &&
                       problem.functionSignature.length > 0 && (
                         <div>
                           <Typography
@@ -342,7 +355,7 @@ export default function ProblemSelector({
                             ))}
                           </div>
                         </div>
-                      )}
+                      )} */}
 
                     {/* Constraints */}
                     {problem.constraints && problem.constraints.length > 0 && (
@@ -456,10 +469,10 @@ export default function ProblemSelector({
                                       {typeof example.input === "string"
                                         ? example.input
                                         : JSON.stringify(
-                                            example.input,
-                                            null,
-                                            2,
-                                          )}
+                                          example.input,
+                                          null,
+                                          2,
+                                        )}
                                     </code>
                                   </pre>
                                 </div>
@@ -481,10 +494,10 @@ export default function ProblemSelector({
                                       {typeof example.output === "string"
                                         ? example.output
                                         : JSON.stringify(
-                                            example.output,
-                                            null,
-                                            2,
-                                          )}
+                                          example.output,
+                                          null,
+                                          2,
+                                        )}
                                     </code>
                                   </pre>
                                 </div>

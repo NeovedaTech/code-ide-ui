@@ -1,5 +1,5 @@
- 
-import  { useState, useEffect } from "react";
+
+import { useState, useEffect } from "react";
 import { isMCQQuestion, isMSQQuestion, isTextQuestion } from "@/types/validate";
 import { ConfirmBox, useConfirmBox } from "@/shared/ConfirmBox";
 import { QuizSection } from "@/types/assessment";
@@ -91,8 +91,10 @@ export default function AssessmentQuizInterface({
   };
 
   const handleAnswerChange = (value: string | string[]) => {
-    if (!userAnswers) return;
-    const currentAnswers = { ...userAnswers };
+    console.log('Current userAnswers:', userAnswers);
+    console.log('Current questionId:', currentQuestionId);
+    console.log('New value:', value);
+    const currentAnswers = userAnswers ? { ...userAnswers } : {};
     currentAnswers[currentQuestionId] = value;
     setUserAnswers(currentAnswers);
     if (flaggedQuestions.has(currentQuestionId)) {
@@ -146,8 +148,8 @@ export default function AssessmentQuizInterface({
   return (
     <>
       <ConfirmBox
-        title="Submit Assessment"
-        content="Are you sure you want to submit the assessment?"
+        title="Submit Section"
+        content="Are you sure you want to submit the section?"
         isOpen={confirmModal.isOpen}
         onClose={confirmModal.closeModal}
         onConfirm={handleConfirm}
@@ -199,11 +201,10 @@ export default function AssessmentQuizInterface({
                       <button
                         key={item._id}
                         onClick={() => setCurrentQuestionId(item._id)}
-                        className={`aspect-square rounded font-bold text-xs transition-all ${
-                          currentQuestionId === item._id
+                        className={`aspect-square rounded font-bold text-xs transition-all ${currentQuestionId === item._id
                             ? "ring-2 ring-offset-1 ring-blue-900"
                             : ""
-                        } ${getQuestionStatusColor(item._id)}`}
+                          } ${getQuestionStatusColor(item._id)}`}
                       >
                         {idx + 1}
                       </button>
@@ -222,7 +223,7 @@ export default function AssessmentQuizInterface({
                       <span className="font-bold text-green-700">
                         {userAnswers &&
                           Object.values(userAnswers).length -
-                            flaggedQuestions.size}
+                          flaggedQuestions.size}
                       </span>
                       e
                     </div>
@@ -258,11 +259,10 @@ export default function AssessmentQuizInterface({
                 </div>
                 <button
                   onClick={toggleFlag}
-                  className={`px-4 py-2 rounded font-semibold text-sm transition-colors ${
-                    flaggedQuestions.has(currentQuestionId)
+                  className={`px-4 py-2 rounded font-semibold text-sm transition-colors ${flaggedQuestions.has(currentQuestionId)
                       ? "bg-amber-700 text-white hover:bg-amber-800"
                       : "bg-gray-300 text-gray-800 hover:bg-gray-400"
-                  }`}
+                    }`}
                 >
                   {flaggedQuestions.has(currentQuestionId)
                     ? "★ Flagged"
@@ -290,16 +290,16 @@ export default function AssessmentQuizInterface({
                             value={option.text}
                             checked={
                               userAnswers &&
-                              Array.isArray(userAnswers[currentQuestionId])
+                                Array.isArray(userAnswers[currentQuestionId])
                                 ? (
-                                    userAnswers[currentQuestionId] as string[]
-                                  ).includes(option.text)
+                                  userAnswers[currentQuestionId] as string[]
+                                ).includes(option.text)
                                 : false
                             }
                             onChange={(e) => {
                               const current =
                                 userAnswers &&
-                                Array.isArray(userAnswers[currentQuestionId])
+                                  Array.isArray(userAnswers[currentQuestionId])
                                   ? (userAnswers[currentQuestionId] as string[])
                                   : [];
                               if (e.target.checked) {

@@ -1,8 +1,12 @@
 import { useAnswers } from "@/context/AnswersContext";
 import { ExecutionResult } from "@/types/execution";
-import { Box, CircularProgress } from "@mui/material";
+import { Box, CircularProgress, Skeleton } from "@mui/material";
 import { CheckCircle2, AlertCircle, X, Clock } from "lucide-react";
 
+
+const CodeRunningSkeleton = () => {
+  return <Skeleton width={"100%"} height={"200px"} sx={{ margin: 0 }}></Skeleton>
+}
 export default function ProblemOutputBox() {
   const { results, isCodeRunning, isCodeSubmitting } = useAnswers();
 
@@ -71,7 +75,7 @@ export default function ProblemOutputBox() {
     };
   };
 
-  if (!results || results.length === 0) {
+  if (!isCodeRunning && !isCodeSubmitting && (!results || results.length === 0)) {
     return (
       <Box
         sx={{
@@ -89,6 +93,30 @@ export default function ProblemOutputBox() {
     );
   }
 
+  if (isCodeRunning || isCodeSubmitting) {
+    return (
+      <Box
+        sx={{
+          height: "100%",
+          overflow: "auto",
+          display: "flex",
+
+          flexDirection: "column",
+          gap: 2,
+          p: 2,
+          backgroundColor: "#fafafa",
+        }}
+      >
+        {
+          Array.from({ length: isCodeRunning ? 2 : 7 }).map(() =>
+            <Skeleton sx={{ borderRadius: "10px" }} variant="rectangular" height={120} />
+          )
+        }
+      </Box>
+    );
+  }
+
+
   return (
     <Box
       sx={{
@@ -96,8 +124,10 @@ export default function ProblemOutputBox() {
         overflow: "auto",
         display: "flex",
         flexDirection: "column",
+
         gap: 0,
         backgroundColor: "#fafafa",
+        
       }}
     >
       {results.map((result: ExecutionResult, index: number) => {
@@ -116,10 +146,11 @@ export default function ProblemOutputBox() {
                 index < results.length - 1 ? "1px solid #e5e7eb" : "none",
               p: "14px 16px",
               transition: "background-color 0.2s",
-              minHeight: isPending ? "160px" : "auto",
+              minHeight: isPending ? "160px" : "90px",
               "&:hover": {
                 backgroundColor: "#f3f4f6",
               },
+           
             }}
           >
             {/* Test Case Header */}

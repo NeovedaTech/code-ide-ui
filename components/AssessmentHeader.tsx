@@ -22,7 +22,7 @@ export default function AssessmentHeader() {
   const isCritical = remaining < 60; // Less than 1 minute
 
   return (
-    <header className="bg-gradient-to-r from-slate-900 to-slate-800 border-b border-slate-700">
+    <header className="bg-[#020817] from-slate-900 to-slate-800 border-b border-slate-700">
       <div className="flex items-center justify-between px-6 py-2.5">
         {/* Left - Logo & Assessment Info */}
         <div className="flex items-center gap-6">

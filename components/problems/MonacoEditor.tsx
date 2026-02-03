@@ -98,8 +98,8 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({
         height: "100%",
         minHeight: `calc(100vh - ${320}px)`,
         position: "relative",
-        borderRadius: "6px",
-        mt: 0.4,
+        // borderRadius: "6px",
+        // mt: 0.4,
         background: "#020817",
         "& .monaco-editor": {
           backgroundColor: "transparent !important",

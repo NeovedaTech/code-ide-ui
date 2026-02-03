@@ -2,46 +2,48 @@
 import { useEffect, useRef, useState } from "react";
 
 interface CountdownArgs {
-  maxTime?: number; // seconds
-  startedAt?: string; // ISO string like "2026-01-26T19:01:19.451Z"
-  currentTime?: string; // ISO string like "2026-01-26T19:01:19.451Z"
+  maxTime?: number;    // minutes
+  startedAt?: string; // ISO
+  currentTime?: string; // ISO (server time)
 }
 
-export default function useCountdown({ startedAt, maxTime, currentTime }: CountdownArgs) {
-  const [remaining, setRemaining] = useState<number>(0);
+export default function useCountdown({
+  startedAt,
+  maxTime,
+  currentTime,
+}: CountdownArgs) {
+  const [remaining, setRemaining] = useState(0);
   const endTimeRef = useRef<number | null>(null);
+  const serverTimeRef = useRef<number | null>(null);
 
+  // initialize endTime and initial server time
   useEffect(() => {
-    if (!startedAt || !maxTime) return;
+    if (!startedAt || !maxTime || !currentTime) return;
 
-    if (!endTimeRef.current) {
-      const startedAtMs = new Date(startedAt).getTime();
-      const now = currentTime ? new Date(currentTime).getTime() : Date.now();
+    endTimeRef.current = new Date(startedAt).getTime() + maxTime * 60 * 1000;
+    serverTimeRef.current = new Date(currentTime).getTime();
 
-      endTimeRef.current = startedAtMs + maxTime * 1000 * 60;
+    // compute initial remaining
+    const diff = Math.max(0, Math.floor(endTimeRef.current - serverTimeRef.current) / 1000);
+    setRemaining(Number(diff.toFixed(0)));
+  }, [startedAt, maxTime, currentTime]);
 
-      const shouldRemain = Math.floor((endTimeRef.current - now) / 1000);
+  // interval to tick every second
+  useEffect(() => {
+    if (!endTimeRef.current || serverTimeRef.current === null) return;
 
-      if (shouldRemain < 0) {
-        console.warn(
-          "⚠️ Test has already expired by",
-          Math.abs(shouldRemain),
-          "seconds",
-        );
-      }
-    }
-
-    const tick = () => {
-      const now = Date.now();
-      const diff = Math.max(0, Math.floor((endTimeRef.current! - now) / 1000));
-      setRemaining(diff);
-    };
-
-    tick(); // immediate update
-    const interval = setInterval(tick, 1000);
+    let ticks = 0; // number of seconds elapsed
+    const interval = setInterval(() => {
+      ticks += 1;
+      const diff = Math.max(
+        0,
+        Math.floor((endTimeRef.current! - (serverTimeRef.current! + ticks * 1000)) / 1000)
+      );
+      setRemaining(Number(diff));
+    }, 1000);
 
     return () => clearInterval(interval);
-  }, [startedAt, maxTime]);
+  }, [endTimeRef.current, serverTimeRef.current]);
 
   return remaining;
 }

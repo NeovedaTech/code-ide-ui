@@ -1,6 +1,7 @@
 import { ASSESMENT_ROUTES, EXECUTION_ROUTES } from "@/constants/ApiRoutes";
 import { get, post, put } from "@/helpers/api";
 import {
+  ExamSolution,
   ExamSolutionResponse,
   SubmtiSectionResponse,
   codingAnswer,
@@ -50,7 +51,7 @@ export const evalCode = async ({
   language: string;
   problemId: string;
 }) => {
-  const res = await post<TokenList>(`${EXECUTION_ROUTES.SUBMIT_CODE}`, {
+  const res = await post<TokenList>(`${EXECUTION_ROUTES.RUN_CODE}`, {
     code,
     language,
     problemId,
@@ -85,6 +86,12 @@ export const submitCode = async ({
 };
 
 export const submitSection = async (formData: SubmtiSectionResponse) => {
-  const data = await put<{success: boolean, message: string}>(`${ASSESMENT_ROUTES.SUBMIT_SECTION}`, formData);
+  const data = await put<{ success: boolean, message: string }>(`${ASSESMENT_ROUTES.SUBMIT_SECTION}`, formData);
   return data;
 };
+
+
+export const getSolutionById = async (solutionId: string) => {
+  const res = await get<{ data: ExamSolution }>(`${ASSESMENT_ROUTES.GET_SOLUTION(solutionId)}`)
+  return res.data;
+}

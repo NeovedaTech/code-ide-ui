@@ -1,9 +1,28 @@
 // AssesmentSubmitted.tsx
 "use client";
 
-import { CheckCircle, Download, Mail } from "lucide-react";
+import { CheckCircle, Download, Mail, Copy, ExternalLink, Check } from "lucide-react";
+import { useState } from "react";
 
-export default function AssesmentSubmitted() {
+interface AssesmentSubmittedProps {
+  solutionId: string;
+}
+
+export default function AssesmentSubmitted({ solutionId }: AssesmentSubmittedProps) {
+  const [copied, setCopied] = useState(false);
+  
+  const previewLink = `${typeof window !== 'undefined' ? window.location.origin : ''}/assessment/preview/${solutionId}`;
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(previewLink);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleOpenPreview = () => {
+    window.open(`/assessment/preview/${solutionId}`, '_blank');
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-50 p-6 flex items-center justify-center">
       <div className="max-w-2xl w-full bg-white rounded-lg shadow-lg overflow-hidden">
@@ -23,6 +42,44 @@ export default function AssesmentSubmitted() {
             <p className="text-gray-800">
               Thank you for completing the assessment. Your submission has been received and is now being evaluated. You will receive your results and feedback shortly.
             </p>
+          </div>
+
+          {/* Preview Link Section */}
+          <div className="space-y-3">
+            <h2 className="text-lg font-bold text-gray-900">Response Preview Link</h2>
+            <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded space-y-3">
+              <p className="text-amber-800 text-sm font-medium">
+                ⚠️ Keep this link safe! You can use it to view your responses anytime.
+              </p>
+              <div className="flex gap-2">
+                <div className="flex-1 bg-white border border-gray-300 rounded-lg px-4 py-3 text-sm text-gray-700 overflow-x-auto">
+                  <code className="break-all">{previewLink}</code>
+                </div>
+                <button
+                  onClick={handleCopyLink}
+                  className="px-4 py-3 bg-gray-700 hover:bg-gray-800 text-white rounded-lg transition-colors flex items-center gap-2 whitespace-nowrap"
+                >
+                  {copied ? (
+                    <>
+                      <Check className="w-4 h-4" />
+                      Copied!
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-4 h-4" />
+                      Copy
+                    </>
+                  )}
+                </button>
+              </div>
+              <button
+                onClick={handleOpenPreview}
+                className="w-full px-4 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors flex items-center justify-center gap-2 font-medium"
+              >
+                <ExternalLink className="w-4 h-4" />
+                Open Preview in New Tab
+              </button>
+            </div>
           </div>
 
           {/* Submission Details */}

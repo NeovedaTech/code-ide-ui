@@ -11,10 +11,8 @@ import Check from "@mui/icons-material/Check";
 import CloudDone from "@mui/icons-material/CloudDone";
 import CloudUpload from "@mui/icons-material/CloudUpload";
 import RestartAlt from "@mui/icons-material/RestartAlt";
-import Save from "@mui/icons-material/Save";
 import { useAnswers } from "@/context/AnswersContext";
 import { Button, Tooltip } from "@mui/material";
-import { COLORS } from "@/constants/colors";
 import { Sync } from "@mui/icons-material";
 import { useAssessment } from "@/context/AssesmentContext";
 const generateStorageKey = (
@@ -185,7 +183,7 @@ export default function ProblemEditor({
 
   return (
     <div className="flex flex-col h-full bg-white overflow-hidden border-l border-gray-200">
-      <div className="flex items-center justify-between px-6 py-3 bg-gray-50 border-b border-gray-200">
+      <div className="flex bg-[] items-center justify-between px-6 py-3 bg-gray-50 border-gray-200">
         <div className="relative" ref={dropdownRef}>
           <button
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
@@ -352,48 +350,7 @@ export default function ProblemEditor({
         )}
       </div>
 
-      {/* -------------------------------------------------------------------
-                Footer Section of Coding Environment
-      ------------------------------------------------------------------- */}
-      <div className="px-6 py-2.5 bg-amber-50 border-t border-amber-200">
-        <div className="flex items-center justify-between gap-4">
-          {/* Auto-save Info */}
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-100 rounded-md border border-amber-300">
-              <SaveIcon
-                className="w-3.5 h-3.5 text-amber-700"
-                style={{ fontSize: 14 }}
-              />
-              <span className="text-xs font-semibold text-amber-800">
-                Auto-save
-              </span>
-            </div>
-            <span className="text-xs text-amber-700">
-              Code saved as{" "}
-              <code className="bg-amber-100 px-1.5 py-0.5 rounded text-amber-800 font-mono text-[10px]">
-                {problem._id.substring(0, 8)}...{selectedLanguage}
-              </code>
-            </span>
-          </div>
-
-          {/* Keyboard Shortcuts */}
-          <div className="flex items-center gap-2">
-            <Keyboard className="text-amber-700" style={{ fontSize: 16 }} />
-            <span className="text-xs text-amber-700 font-medium">
-              Save manually:
-            </span>
-            <div className="flex items-center gap-1">
-              <kbd className="inline-flex items-center justify-center min-w-[28px] h-6 px-2 bg-amber-100 border border-amber-300 rounded text-xs font-semibold text-amber-800 shadow-sm">
-                Ctrl
-              </kbd>
-              <span className="text-amber-600">+</span>
-              <kbd className="inline-flex items-center justify-center min-w-[28px] h-6 px-2 bg-amber-100 border border-amber-300 rounded text-xs font-semibold text-amber-800 shadow-sm">
-                S
-              </kbd>
-            </div>
-          </div>
-        </div>
-      </div>
+     
     </div>
   );
 }

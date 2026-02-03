@@ -19,7 +19,7 @@ export const COLORS = {
 
   // Success
   success: {
-    main: "#16a34a",
+    main: "bg-[#16a34a]",
     light: "#22c55e",
     lighter: "#dcfce7",
     dark: "#15803d",

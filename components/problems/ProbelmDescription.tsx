@@ -2,7 +2,7 @@ import React from "react";
 import { CodingProblem } from "@/types/assessment";
 
 // Custom Markdown Renderer
-function MarkdownRenderer({ source }: { source: string }) {
+export function MarkdownRenderer({ source }: { source: string }) {
   if (!source) return null;
 
   const renderMarkdown = (text: string) => {

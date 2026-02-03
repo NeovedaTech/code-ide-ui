@@ -2,13 +2,15 @@ import { CodingProblem, CodingSection } from "@/types/assessment";
 import ProbelmDescription from "./problems/ProbelmDescription";
 import ProblemSelector from "./problems/ProblemSelector";
 import { Box, Drawer, IconButton } from "@mui/material";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import ProblemRunner from "./problems/ProblemRunner";
 import MenuIcon from "@mui/icons-material/Menu";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import ProblemOutputBox from "./problems/ProblemOutputBox";
 import { useAnswers } from "@/context/AnswersContext";
+import { useAssessment } from "@/context/AssesmentContext";
+import { ConfirmBox } from "@/shared/ConfirmBox";
 
 export default function AssessmentCodeInterface({
   section,
@@ -20,46 +22,69 @@ export default function AssessmentCodeInterface({
   );
   const [selectorOpen, setSelectorOpen] = useState(true);
   const [descriptionOpen, setDescriptionOpen] = useState(true);
-  const [outputOpen, setOutputOpen] = useState(true);
-  const [descriptionWidth, setDescriptionWidth] = useState(35); // percentage
-  const [outputWidth, setOutputWidth] = useState(30); // percentage
+  // const [outputOpen, setOutputOpen] = useState(true);
+  // const [descriptionWidth, setDescriptionWidth] = useState(35); // percentage
+  const [outputWidth, setOutputWidth] = useState(36); // percentage
   const [isResizingLeft, setIsResizingLeft] = useState(false);
   const [isResizingRight, setIsResizingRight] = useState(false);
+  const [isResizingSelectorRight, setIsResizingSelectorRight] = useState(false);
+  const [selectorWidth, setSelectorWidth] = useState(380); // pixels
 
   // Find the current problem by ID
- 
   const currentProblem = useMemo(() => {
     if (!section?.problems || !currentProblemId) return undefined;
     return section.problems.find((p) => p._id === currentProblemId);
   }, [section?.problems, currentProblemId]);
 
-  const handleMouseDownLeft = (e: React.MouseEvent) => {
-    e.preventDefault();
-    setIsResizingLeft(true);
-  };
+  // const handleMouseDownLeft = (e: React.MouseEvent) => {
+  //   e.preventDefault();
+  //   setIsResizingLeft(true);
+  // };
 
+  const { isSectionDone } = useAssessment();
+  const [isOpen, setIsOpen] = useState<boolean>(false);
+  const initializeRef = useRef(false);
+  useEffect(() => {
+    if (initializeRef.current) return;
+    if (isSectionDone) {
+      initializeRef.current = true;
+      setIsOpen(true);
+    }
+  }, [isSectionDone]);
   const handleMouseDownRight = (e: React.MouseEvent) => {
     e.preventDefault();
     setIsResizingRight(true);
   };
 
-  const { showOutputWindow, openOutputWindow, closeOutputWindow } = useAnswers();
+  const handleMouseDownSelectorRight = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizingSelectorRight(true);
+  };
+
+  const { handleSubmit } = useAnswers();
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
+      if (isResizingSelectorRight) {
+        const newWidth = e.clientX;
+        if (newWidth >= 250 && newWidth <= 600) {
+          setSelectorWidth(newWidth);
+        }
+      }
+
       if (isResizingLeft) {
-        const containerLeft = selectorOpen ? 380 : 0;
+        const containerLeft = selectorWidth;
         const containerWidth = window.innerWidth - containerLeft;
         const newWidth = ((e.clientX - containerLeft) / containerWidth) * 100;
 
         if (newWidth >= 20 && newWidth <= 50) {
-          setDescriptionWidth(newWidth);
+          // setDescriptionWidth(newWidth);
         }
       }
 
       if (isResizingRight) {
         const containerRight = window.innerWidth;
-        const containerLeft = selectorOpen ? 380 : 0;
+        const containerLeft = selectorWidth;
         const totalWidth = containerRight - containerLeft;
         const newWidth = ((containerRight - e.clientX) / totalWidth) * 100;
 
@@ -72,9 +97,10 @@ export default function AssessmentCodeInterface({
     const handleMouseUp = () => {
       setIsResizingLeft(false);
       setIsResizingRight(false);
+      setIsResizingSelectorRight(false);
     };
 
-    if (isResizingLeft || isResizingRight) {
+    if (isResizingLeft || isResizingRight || isResizingSelectorRight) {
       document.addEventListener("mousemove", handleMouseMove);
       document.addEventListener("mouseup", handleMouseUp);
       document.body.style.cursor = "col-resize";
@@ -87,9 +113,7 @@ export default function AssessmentCodeInterface({
       document.body.style.cursor = "";
       document.body.style.userSelect = "";
     };
-  }, [isResizingLeft, isResizingRight, selectorOpen]);
-
-  const drawerWidth = 380;
+  }, [isResizingLeft, isResizingRight, isResizingSelectorRight, selectorWidth]);
 
   return (
     <Box
@@ -100,16 +124,16 @@ export default function AssessmentCodeInterface({
         overflow: "hidden",
       }}
     >
-      {/* Problem Selector Drawer */}
+      {/* Problem Selector Drawer - MOVED OUTSIDE */}
       <Drawer
         variant="persistent"
         anchor="left"
         open={selectorOpen}
         sx={{
-          width: selectorOpen ? drawerWidth : 0,
+          width: selectorOpen ? selectorWidth : 0,
           flexShrink: 0,
           "& .MuiDrawer-paper": {
-            width: drawerWidth,
+            width: selectorWidth,
             boxSizing: "border-box",
             position: "relative",
             height: "100%",
@@ -143,27 +167,64 @@ export default function AssessmentCodeInterface({
         </Box>
       </Drawer>
 
-      {/* Toggle Button when drawer is closed */}
-      {!selectorOpen && (
-        <IconButton
-          onClick={() => setSelectorOpen(true)}
+      {/* Selector Resizer Handle */}
+      {selectorOpen && (
+        <Box
+          onMouseDown={handleMouseDownSelectorRight}
           sx={{
-            position: "absolute",
-            left: 8,
-            top: 8,
-            zIndex: 10,
-            backgroundColor: "white",
-            boxShadow: 2,
+            width: "6px",
+            cursor: "col-resize",
+            backgroundColor: isResizingSelectorRight ? "#3b82f6" : "#e5e7eb",
+            transition: "background-color 0.2s",
             "&:hover": {
-              backgroundColor: "grey.100",
+              backgroundColor: "#93c5fd",
             },
+            position: "relative",
+            zIndex: 10,
+            flexShrink: 0,
           }}
         >
-          <MenuIcon />
-        </IconButton>
+          {/* Visual indicator dots */}
+          <Box
+            sx={{
+              position: "absolute",
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+              display: "flex",
+              flexDirection: "column",
+              gap: "4px",
+              pointerEvents: "none",
+            }}
+          >
+            <Box
+              sx={{
+                width: "3px",
+                height: "3px",
+                borderRadius: "50%",
+                backgroundColor: isResizingSelectorRight ? "white" : "#9ca3af",
+              }}
+            />
+            <Box
+              sx={{
+                width: "3px",
+                height: "3px",
+                borderRadius: "50%",
+                backgroundColor: isResizingSelectorRight ? "white" : "#9ca3af",
+              }}
+            />
+            <Box
+              sx={{
+                width: "3px",
+                height: "3px",
+                borderRadius: "50%",
+                backgroundColor: isResizingSelectorRight ? "white" : "#9ca3af",
+              }}
+            />
+          </Box>
+        </Box>
       )}
 
-      {/* Main Content Area */}
       <Box
         sx={{
           display: "flex",
@@ -173,6 +234,28 @@ export default function AssessmentCodeInterface({
           gap: 0,
         }}
       >
+        {/* Toggle Button when drawer is closed */}
+        {!selectorOpen && (
+          <IconButton
+            onClick={() => setSelectorOpen(true)}
+            sx={{
+              position: "absolute",
+              left: 8,
+              top: 8,
+              zIndex: 10,
+              backgroundColor: "white",
+              boxShadow: 2,
+              "&:hover": {
+                backgroundColor: "grey.100",
+              },
+            }}
+          >
+            <MenuIcon />
+          </IconButton>
+        )}
+
+        {/* Main Content Area */}
+
         {/* Problem Description Panel - LEFT */}
         {descriptionOpen && (
           <>
@@ -189,61 +272,6 @@ export default function AssessmentCodeInterface({
               <ProbelmDescription problem={currentProblem as CodingProblem} />
             </Box> */}
 
-            {/* Left Resizer Handle */}
-            <Box
-              onMouseDown={handleMouseDownLeft}
-              sx={{
-                width: "6px",
-                cursor: "col-resize",
-                backgroundColor: isResizingLeft ? "#3b82f6" : "#e5e7eb",
-                transition: "background-color 0.2s",
-                "&:hover": {
-                  backgroundColor: "#93c5fd",
-                },
-                position: "relative",
-                zIndex: 10,
-                flexShrink: 0,
-              }}
-            >
-              {/* Visual indicator dots */}
-              <Box
-                sx={{
-                  position: "absolute",
-                  top: "50%",
-                  left: "50%",
-                  transform: "translate(-50%, -50%)",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "4px",
-                  pointerEvents: "none",
-                }}
-              >
-                <Box
-                  sx={{
-                    width: "3px",
-                    height: "3px",
-                    borderRadius: "50%",
-                    backgroundColor: isResizingLeft ? "white" : "#9ca3af",
-                  }}
-                />
-                <Box
-                  sx={{
-                    width: "3px",
-                    height: "3px",
-                    borderRadius: "50%",
-                    backgroundColor: isResizingLeft ? "white" : "#9ca3af",
-                  }}
-                />
-                <Box
-                  sx={{
-                    width: "3px",
-                    height: "3px",
-                    borderRadius: "50%",
-                    backgroundColor: isResizingLeft ? "white" : "#9ca3af",
-                  }}
-                />
-              </Box>
-            </Box>
           </>
         )}
 
@@ -286,136 +314,115 @@ export default function AssessmentCodeInterface({
           />
         </Box>
 
-        {/* Right Resizer Handle */}
-        {outputOpen && (
+        {/* Right Resizer Hand/le */}
+        {/* {outputOpen && (/ */}
+        <Box
+          onMouseDown={handleMouseDownRight}
+          sx={{
+            width: "6px",
+            cursor: "col-resize",
+            backgroundColor: isResizingRight ? "#3b82f6" : "#e5e7eb",
+            transition: "background-color 0.2s",
+            "&:hover": {
+              backgroundColor: "#93c5fd",
+            },
+            position: "relative",
+            zIndex: 10,
+            flexShrink: 0,
+          }}
+        >
+          {/* Visual indicator dots */}
           <Box
-            onMouseDown={handleMouseDownRight}
-            sx={{
-              width: "6px",
-              cursor: "col-resize",
-              backgroundColor: isResizingRight ? "#3b82f6" : "#e5e7eb",
-              transition: "background-color 0.2s",
-              "&:hover": {
-                backgroundColor: "#93c5fd",
-              },
-              position: "relative",
-              zIndex: 10,
-              flexShrink: 0,
-            }}
-          >
-            {/* Visual indicator dots */}
-            <Box
-              sx={{
-                position: "absolute",
-                top: "50%",
-                left: "50%",
-                transform: "translate(-50%, -50%)",
-                display: "flex",
-                flexDirection: "column",
-                gap: "4px",
-                pointerEvents: "none",
-              }}
-            >
-              <Box
-                sx={{
-                  width: "3px",
-                  height: "3px",
-                  borderRadius: "50%",
-                  backgroundColor: isResizingRight ? "white" : "#9ca3af",
-                }}
-              />
-              <Box
-                sx={{
-                  width: "3px",
-                  height: "3px",
-                  borderRadius: "50%",
-                  backgroundColor: isResizingRight ? "white" : "#9ca3af",
-                }}
-              />
-              <Box
-                sx={{
-                  width: "3px",
-                  height: "3px",
-                  borderRadius: "50%",
-                  backgroundColor: isResizingRight ? "white" : "#9ca3af",
-                }}
-              />
-            </Box>
-          </Box>
-        )}
-
-        {/* Output Panel - RIGHT */}
-        {outputOpen && (
-          <Box
-            sx={{
-              width: `${outputWidth}%`,
-              height: "100%",
-              borderLeft: "1px solid #e5e7eb",
-              backgroundColor: "white",
-              overflow: "auto",
-              position: "relative",
-              flexShrink: 0,
-              display: "flex",
-              flexDirection: "column",
-            }}
-          >
-            {/* Toggle Output Button */}
-            <IconButton
-              onClick={() => setOutputOpen(false)}
-              sx={{
-                position: "absolute",
-                right: 4,
-                top: 8,
-                zIndex: 10,
-                backgroundColor: "white",
-                boxShadow: 2,
-                "&:hover": {
-                  backgroundColor: "grey.100",
-                },
-              }}
-            >
-              <ChevronRightIcon />
-            </IconButton>
-
-            <ProblemOutputBox />
-          </Box>
-        )}
-
-        {/* Toggle Output Button when closed */}
-        {!outputOpen && (
-          <IconButton
-            onClick={() => setOutputOpen(true)}
             sx={{
               position: "absolute",
-              right: 8,
-              top: 8,
-              zIndex: 10,
-              backgroundColor: "white",
-              boxShadow: 2,
-              "&:hover": {
-                backgroundColor: "grey.100",
-              },
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+              display: "flex",
+              flexDirection: "column",
+              gap: "4px",
+              pointerEvents: "none",
             }}
           >
-            <ChevronLeftIcon />
-          </IconButton>
-        )}
+            <Box
+              sx={{
+                width: "3px",
+                height: "3px",
+                borderRadius: "50%",
+                backgroundColor: isResizingRight ? "white" : "#9ca3af",
+              }}
+            />
+            <Box
+              sx={{
+                width: "3px",
+                height: "3px",
+                borderRadius: "50%",
+                backgroundColor: isResizingRight ? "white" : "#9ca3af",
+              }}
+            />
+            <Box
+              sx={{
+                width: "3px",
+                height: "3px",
+                borderRadius: "50%",
+                backgroundColor: isResizingRight ? "white" : "#9ca3af",
+              }}
+            />
+          </Box>
+        </Box>
+        {/* )} */}
+
+        {/* Output Panel - RIGHT */}
+        {/* {outputOpen && ( */}
+        <Box
+          sx={{
+            width: `${outputWidth}%`,
+            height: "100%",
+            borderLeft: "1px solid #e5e7eb",
+            backgroundColor: "white",
+            overflow: "auto",
+            position: "relative",
+            flexShrink: 0,
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+
+          <ProblemOutputBox />
+        </Box>
+        {/* )} */}
+
       </Box>
 
       {/* Overlay when resizing to prevent interference */}
-      {(isResizingLeft || isResizingRight) && (
-        <Box
-          sx={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            zIndex: 9999,
-            cursor: "col-resize",
-          }}
-        />
-      )}
-    </Box>
+      {
+        (isResizingLeft || isResizingRight) && (
+          <Box
+            sx={{
+              position: "fixed",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              zIndex: 9999,
+              cursor: "col-resize",
+            }}
+          />
+        )
+      }
+      <ConfirmBox
+        title="Submit Section"
+        content="You're all problems are submitted ? Do you wish to submit section ?"
+        cancelText="Review Once"
+        isOpen={isOpen}
+        onClose={() => setIsOpen(false)}
+        onConfirm={handleSubmit}
+      />
+      <div onClick={(() => setIsOpen(true))} className="animate-pulse cursor-pointer ease-in-out absolute z-[999] right-5 bottom-5 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg">
+        Submit Section
+      </div>
+
+
+    </Box >
   );
 }
