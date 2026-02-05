@@ -2,7 +2,9 @@
 
 import { useAssessmentBySolutionId } from "@/hooks/AssesmentApi";
 import { CheckCircle2, XCircle, Clock, Award, Code, FileText, AlertCircle, TrendingUp, Target } from "lucide-react";
-import React from "react";
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { ConfirmBox, useConfirmBox } from "@/shared/ConfirmBox";
 
 interface AssessmentPreviewProps {
     solutionId: string;
@@ -10,6 +12,18 @@ interface AssessmentPreviewProps {
 
 export default function AssessmentPreview({ solutionId }: AssessmentPreviewProps) {
     const { data: solution, isLoading, error } = useAssessmentBySolutionId({ solutionId });
+    const router = useRouter();
+    const { isOpen: isEvaluatingModalOpen, openModal: openEvaluatingModal, closeModal: closeEvaluatingModal } = useConfirmBox();
+
+    useEffect(() => {
+        if (solution && !solution.isEvaluated) {
+            openEvaluatingModal();
+            const timer = setTimeout(() => {
+                router.refresh();
+            }, 5000);
+            return () => clearTimeout(timer);
+        }
+    }, [solution, openEvaluatingModal, router]);
 
     if (isLoading) {
         return (
@@ -233,11 +247,23 @@ export default function AssessmentPreview({ solutionId }: AssessmentPreviewProps
                     codingSnapshot={hasCodingData ? codingSnapshot : null}
                 />
             </div>
+
+            <ConfirmBox
+                isOpen={isEvaluatingModalOpen}
+                onClose={closeEvaluatingModal}
+                onConfirm={router.refresh}
+                title="Assessment Still Evaluating"
+                content="Your assessment is still being evaluated. Please refresh the page in 5 seconds."
+                confirmText="Refresh Now"
+                cancelText="Close"
+                closeOnBackdropClick={false}
+            />
         </div>
     );
 }
 
 // Helper Components
+
 
 interface ScoreCardProps {
     icon: React.ReactNode;

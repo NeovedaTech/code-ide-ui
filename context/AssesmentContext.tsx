@@ -1,5 +1,3 @@
-
-
 /* eslint-disable react-hooks/set-state-in-effect */
 
 "use client";
@@ -11,6 +9,8 @@ import React, {
   useState,
   ReactNode,
   useEffect,
+  SetStateAction,
+  Dispatch,
 } from "react";
 /**
  * @interface AssessmentContextType
@@ -30,6 +30,8 @@ interface AssessmentContextType {
   assessmentError: any;
   solutionId: string;
   isSectionDone: boolean;
+  autoSubmit: boolean;
+  setAutoSubmit: Dispatch<SetStateAction<boolean>>;
 }
 /**
  * @const AssessmentContext
@@ -73,7 +75,7 @@ export const AssessmentProvider: React.FC<AssessmentProviderProps> = ({
     SectionResponse | undefined
   >();
   const [solutionId, setSolutionId] = useState<string>("");
-
+  const [autoSubmit, setAutoSubmit] = useState<boolean>(false);
 
   // / const {isAuthenticated} = useUser();
 
@@ -118,9 +120,10 @@ export const AssessmentProvider: React.FC<AssessmentProviderProps> = ({
     setLoading(false);
     // If the assessment data is available, update the current section and section number.
     if (assesment) {
-      const curr = assesment.data.currSection
+      const curr = assesment.data.currSection;
       const section = assesment.data.assesmentSnapshot[curr];
-      const response = assesment.data.response[curr]
+      const response = assesment.data.response[curr];
+      setAutoSubmit(false);
       setCurrentSection(section);
       setCurrSectionNumber(curr);
       setHasStarted(assesment.data.hasAgreed);
@@ -128,11 +131,16 @@ export const AssessmentProvider: React.FC<AssessmentProviderProps> = ({
       setHasSubmitted(assesment.data.isSubmitted);
       setCurrResponse(response);
 
-
-      if (!assesment.data.isSubmitted && !assesment.data.hasAgreed && section.type === "coding") {
-
+      if (
+        !assesment.data.isSubmitted &&
+        assesment.data.hasAgreed &&
+        section.type === "coding"
+      ) {
         const currSolution = response?.codingAnswers[0] as {};
-        setIsSectionDone(section.problems.length === Object.keys(currSolution ?? {})?.length)
+        setIsSectionDone(
+          Number(section.problems.length) ===
+            Object.keys(currSolution ?? {})?.length,
+        );
       }
       // setIsSectionDone(assesment.data)
     }
@@ -146,6 +154,8 @@ export const AssessmentProvider: React.FC<AssessmentProviderProps> = ({
         solutionId,
         assessmentId,
         currentSection,
+        autoSubmit,
+        setAutoSubmit,
         assessmentLoading,
         Loading,
         currSectionNumber,

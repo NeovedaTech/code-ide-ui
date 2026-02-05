@@ -19,7 +19,7 @@ import {
 } from "react";
 import { useAssessment } from "./AssesmentContext";
 import { codingAnswer, quizAnswer } from "@/types/assessment";
-import { QueryClient, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 
 // Define the types for the context
 interface AnswersContextType {
@@ -104,7 +104,7 @@ export const AnswersProvider = ({ children }: { children: ReactNode }) => {
   const openOutputWindow = useCallback(() => setShowOutputWindow(true), []);
   // Memoized callback to close the output window.
   const closeOutputWindow = useCallback(() => setShowOutputWindow(false), []);
-
+  // hook to keep track of autosubmitting status 
   // Mutation hook for running code.
   const runCodeMutation = useRunCode();
   // QueryClient for invalidating queries after section submission.
@@ -158,7 +158,6 @@ export const AnswersProvider = ({ children }: { children: ReactNode }) => {
       sectionId: string;
     }) => {
       try {
-        console.log("startExecution", code, lang, problemId, sectionId);
         setIsCodeRunning(true);
         setShowOutputWindow(true);
         const res = await runCodeMutation.mutateAsync({
@@ -210,7 +209,6 @@ export const AnswersProvider = ({ children }: { children: ReactNode }) => {
       solutionId: string;
     }) => {
       try {
-        console.log("startCodeSubmission", code, lang, problemId, sectionId);
         setIsCodeSubmitting(true);
         const res = await submitCodeMutation.mutateAsync({
           code,
@@ -233,7 +231,7 @@ export const AnswersProvider = ({ children }: { children: ReactNode }) => {
           };
         });
         setResults(results);
-        queryClient.invalidateQueries({ queryKey: ['assesment'] })
+        queryClient.invalidateQueries({ queryKey: ["assesment"] });
       } catch (error) {
         console.error("Error in startExecution:", error);
         setResults(null);
@@ -278,7 +276,7 @@ export const AnswersProvider = ({ children }: { children: ReactNode }) => {
         current: Number(currSectionNumber),
       });
       // Invalidate the 'assesment' query to refetch assessment data after submission.
-      queryClient.invalidateQueries({ queryKey: ['assesment'] })
+      queryClient.invalidateQueries({ queryKey: ["assesment"] });
     } catch (e) {
       console.error("Error submitting section:", e);
     }
@@ -300,7 +298,7 @@ export const AnswersProvider = ({ children }: { children: ReactNode }) => {
     currentSectionAnswers,
     sectionSubmitting,
     setSectionSubmitting,
-    setCurrentSectionAnswers,
+    setCurrentSectionAnswers
   };
   return (
     <AnswersContext.Provider value={value}>{children}</AnswersContext.Provider>

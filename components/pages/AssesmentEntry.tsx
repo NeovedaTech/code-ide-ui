@@ -1,6 +1,7 @@
 "use client";
 
 import AssesmentAttempt from "@/components/AssesmentAttempt";
+import { AnswersProvider } from "@/context/AnswersContext";
 import { AssessmentProvider } from "@/context/AssesmentContext";
 import { useSearchParams } from "next/navigation";
 
@@ -11,9 +12,11 @@ export default function AssesmentEntry() {
 
   return (
     <>
-    {/* USERCONTXT USERID={USERID} */}
+      {/* USERCONTXT USERID={USERID} */}
       <AssessmentProvider assessmentId={assessmentId} userId={userId}>
-        <AssesmentAttempt />
+        <AnswersProvider>
+          <AssesmentAttempt />
+        </AnswersProvider>
       </AssessmentProvider>
     </>
   );

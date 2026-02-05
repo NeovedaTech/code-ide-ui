@@ -5,7 +5,7 @@ import { useAssessment } from "@/context/AssesmentContext";
 import { useServerSync } from "@/hooks/AssesmentApi";
 import useCountdown from "@/hooks/useCountdown";
 import { formatTime } from "@/utils/formatTime";
-import { useEffect, useRef, useState } from "react";
+import {  useState } from "react";
 
 export default function AssessmentHeader() {
   const { currentSection, currResponse } = useAssessment();
@@ -17,7 +17,6 @@ export default function AssessmentHeader() {
     maxTime: currentSection?.maxTime,
   });
 
-  const [autoSubmitted, setAutoSubmitted] = useState(false);
 
   // Guard rendering only (safe)
   if (!serverSync || !currentSection || !currResponse) return null;

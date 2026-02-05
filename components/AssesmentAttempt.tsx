@@ -5,10 +5,11 @@ import AssesmentQuizInterface from "./AssesmentQuizInterface";
 import AssessmentHeader from "./AssessmentHeader";
 import AssesmentSubmitted from "./AssesmentSubmitted";
 import AssesmentInstructions from "./AssesmentInstructions";
-import { AnswersProvider } from "@/context/AnswersContext";
+import { AnswersProvider, useAnswers } from "@/context/AnswersContext";
 import { QuizSection } from "@/types/assessment";
 import { ErrorBox } from "@/shared/ErrorBox";
 import { LoadingBox } from "@/shared/LoadingBox";
+import { AutoSubmitBox } from "@/shared/AutosubmitBox";
 
 export default function AssesmentAttempt() {
   const {
@@ -17,17 +18,16 @@ export default function AssesmentAttempt() {
     hasSubmitted,
     assessmentLoading,
     assessmentError,
-    solutionId
+    solutionId,
   } = useAssessment();
 
-
   const SECTION_TYPE = currentSection?.type;
+  const { handleSubmit } = useAnswers();
+  const { autoSubmit, setAutoSubmit } = useAssessment();
 
-  if (assessmentLoading) {
-    return <LoadingBox isOpen />;
-  }
+  if (assessmentLoading) return <LoadingBox isOpen />;
 
-  if (assessmentError) {
+  if (assessmentError)
     return (
       <ErrorBox
         title="Solution Not Found"
@@ -37,21 +37,16 @@ export default function AssesmentAttempt() {
         isOpen
       />
     );
-  }
-  if (!hasStarted)
-    return (
-      <>
-        <AssesmentInstructions />
-      </>
-    );
+  if (!hasStarted) return <AssesmentInstructions />;
   if (hasSubmitted)
-    return (
-      <>
-        <AssesmentSubmitted solutionId={solutionId as string} />
-      </>
-    );
+    return <AssesmentSubmitted solutionId={solutionId as string} />;
   return (
-    <AnswersProvider>
+    <>
+      <AutoSubmitBox
+        onClose={() => setAutoSubmit(false)}
+        isOpen={autoSubmit}
+        onSubmit={handleSubmit}
+      />
       <AssessmentHeader />
       {SECTION_TYPE === "quiz" && (
         <AssesmentQuizInterface section={currentSection as QuizSection} />
@@ -59,6 +54,6 @@ export default function AssesmentAttempt() {
       {SECTION_TYPE === "coding" && (
         <AssessmentCodeInterface section={currentSection} />
       )}
-    </AnswersProvider>
+    </>
   );
 }

@@ -271,7 +271,6 @@ export default function AssessmentCodeInterface({
             >
               <ProbelmDescription problem={currentProblem as CodingProblem} />
             </Box> */}
-
           </>
         )}
 
@@ -387,29 +386,25 @@ export default function AssessmentCodeInterface({
             flexDirection: "column",
           }}
         >
-
           <ProblemOutputBox />
         </Box>
         {/* )} */}
-
       </Box>
 
       {/* Overlay when resizing to prevent interference */}
-      {
-        (isResizingLeft || isResizingRight) && (
-          <Box
-            sx={{
-              position: "fixed",
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              zIndex: 9999,
-              cursor: "col-resize",
-            }}
-          />
-        )
-      }
+      {(isResizingLeft || isResizingRight) && (
+        <Box
+          sx={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 9999,
+            cursor: "col-resize",
+          }}
+        />
+      )}
       <ConfirmBox
         title="Submit Section"
         content="You're all problems are submitted ? Do you wish to submit section ?"
@@ -418,11 +413,14 @@ export default function AssessmentCodeInterface({
         onClose={() => setIsOpen(false)}
         onConfirm={handleSubmit}
       />
-      <div onClick={(() => setIsOpen(true))} className="animate-pulse cursor-pointer ease-in-out absolute z-[999] right-5 bottom-5 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg">
-        Submit Section
-      </div>
-
-
-    </Box >
+      {isSectionDone && (
+        <div
+          onClick={() => setIsOpen(true)}
+          className="animate-pulse cursor-pointer ease-in-out absolute z-[999] right-5 bottom-5 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg"
+        >
+          Submit Section
+        </div>
+      )}
+    </Box>
   );
 }
