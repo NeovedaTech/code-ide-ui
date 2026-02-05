@@ -15,7 +15,7 @@ export const AutoSubmitBox = ({
   const [count, setCount] = useState(seconds);
 
   useEffect(() => {
-    if (count === 0 &&  isOpen) {
+    if (count <= 0 &&  isOpen) {
       onSubmit();
       return;
     }
