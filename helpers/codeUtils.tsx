@@ -16,8 +16,8 @@ const getAuthHeaders = () => ({
 });
 
 export const fetchResultsInBatches = async (tokens: TokenList) => {
-  const maxAttempts = 10;
-  const delay = 500;
+  const maxAttempts = 30;
+  const delay = 1000;
   const tokenStrings = tokens.map((t) => (typeof t === "string" ? t : t.token));
   
   // Track which tokens are still pending
