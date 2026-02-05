@@ -8,7 +8,6 @@ import {
   Container,
   Box,
   Typography,
-  Grid,
   Card,
   CardContent,
   TextField,
@@ -283,7 +282,7 @@ export default function Page() {
       }
 
       // Call API to register user and get userId
-      const response = await fetch(NEXT_PUBLIC_API_URL + "/api/user/register", {
+      const response = await fetch(NEXT_PUBLIC_API_URL + "/api/v1/user/register", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
