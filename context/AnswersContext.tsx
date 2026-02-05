@@ -276,6 +276,7 @@ export const AnswersProvider = ({ children }: { children: ReactNode }) => {
         current: Number(currSectionNumber),
       });
       // Invalidate the 'assesment' query to refetch assessment data after submission.
+      localStorage.clear();
       queryClient.invalidateQueries({ queryKey: ["assesment"] });
     } catch (e) {
       console.error("Error submitting section:", e);
