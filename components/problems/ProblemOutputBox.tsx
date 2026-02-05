@@ -146,7 +146,7 @@ export default function ProblemOutputBox() {
                 index < results.length - 1 ? "1px solid #e5e7eb" : "none",
               p: "14px 16px",
               transition: "background-color 0.2s",
-              minHeight: isPending ? "160px" : "220px",
+              minHeight: isPending ? "160px" : "max-content",
               "&:hover": {
                 backgroundColor: "#f3f4f6",
               },
