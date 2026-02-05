@@ -55,7 +55,7 @@ export default function ProblemOutputBox() {
         borderColor: "border-red-500/30",
       };
     }
-    if (statusId === -2) {
+    if (statusId === 5 || statusId === -2) {
       return {
         passed: false,
         icon: <AlertCircle className="w-4 h-4" />,
