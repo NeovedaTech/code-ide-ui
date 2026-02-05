@@ -19,7 +19,7 @@ export const fetchResultsInBatches = async (tokens: TokenList) => {
   const maxAttempts = 30;
   const delay = 1000;
   const tokenStrings = tokens.map((t) => (typeof t === "string" ? t : t.token));
-  
+
   // Track which tokens are still pending
   const pendingTokens = new Set(tokenStrings);
   const results = new Map<string, any>();
@@ -39,8 +39,8 @@ export const fetchResultsInBatches = async (tokens: TokenList) => {
       // Process results and update pending tokens
       res.submissions.forEach((r: any, idx: number) => {
         const token = Array.from(pendingTokens)[idx];
-        
-        if ([3, 4, 6, 11].includes(r.status?.id)) {
+
+        if ([3, 4, 5, 6, 11].includes(r.status?.id)) {
           // Status is complete
           results.set(token, {
             stdout: r.stdout ? decodeBase64(r.stdout).trim() : "",
