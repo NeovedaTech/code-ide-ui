@@ -1,30 +1,34 @@
 "use client";
 
+import { useAnswers } from "@/context/AnswersContext";
 import { useAssessment } from "@/context/AssesmentContext";
 import { useServerSync } from "@/hooks/AssesmentApi";
 import useCountdown from "@/hooks/useCountdown";
 import { formatTime } from "@/utils/formatTime";
+import { useEffect, useRef, useState } from "react";
 
 export default function AssessmentHeader() {
   const { currentSection, currResponse } = useAssessment();
   const { data: serverSync } = useServerSync();
-
+  // ✅ Hooks must always run
   const remaining = useCountdown({
-    currentTime: serverSync?.serverTime as string,
-    startedAt: currResponse?.startedAt as string,
-    maxTime: currentSection?.maxTime as number,
+    currentTime: serverSync?.serverTime,
+    startedAt: currResponse?.startedAt,
+    maxTime: currentSection?.maxTime,
   });
 
-  if (!serverSync || !currentSection) return null;
+  const [autoSubmitted, setAutoSubmitted] = useState(false);
 
-  // Determine timer urgency
-  const isUrgent = remaining < 300; // Less than 5 minutes
-  const isCritical = remaining < 60; // Less than 1 minute
+  // Guard rendering only (safe)
+  if (!serverSync || !currentSection || !currResponse) return null;
+
+  const isUrgent = remaining < 300;   // < 5 min
+  const isCritical = remaining < 60;  // < 1 min
 
   return (
-    <header className="bg-[#020817] from-slate-900 to-slate-800 border-b border-slate-700">
+    <header className="bg-[#020817] border-b border-slate-700">
       <div className="flex items-center justify-between px-6 py-2.5">
-        {/* Left - Logo & Assessment Info */}
+        {/* Left - Logo */}
         <div className="flex items-center gap-6">
           <div className="flex items-center px-4 py-1.5 bg-white/10 backdrop-blur-sm rounded-md border border-white/20">
             <img
@@ -35,27 +39,25 @@ export default function AssessmentHeader() {
           </div>
         </div>
 
+        {/* Right - Timer */}
         <div className="flex items-center gap-4">
-          <div className="h-8 w-px bg-slate-600"></div>
+          <div className="h-8 w-px bg-slate-600" />
 
           <div
-            className={`flex items-center gap-3 px-4 py-1.5 rounded-md border-2 transition-all ${
-              isCritical
-                ? "bg-red-500/10 border-red-500 backdrop-blur-sm"
-                : isUrgent
-                  ? "bg-amber-500/10 border-amber-500 backdrop-blur-sm"
-                  : "bg-blue-500/10 border-blue-500 backdrop-blur-sm"
-            }`}
-          >
-            {/* Clock Icon */}
-            <svg
-              className={`w-5 h-5 ${
-                isCritical
-                  ? "text-red-400"
-                  : isUrgent
-                    ? "text-amber-400"
-                    : "text-blue-400"
+            className={`flex items-center gap-3 px-4 py-1.5 rounded-md border-2 transition-all ${isCritical
+              ? "bg-red-500/10 border-red-500"
+              : isUrgent
+                ? "bg-amber-500/10 border-amber-500"
+                : "bg-blue-500/10 border-blue-500"
               }`}
+          >
+            <svg
+              className={`w-5 h-5 ${isCritical
+                ? "text-red-400"
+                : isUrgent
+                  ? "text-amber-400"
+                  : "text-blue-400"
+                }`}
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -69,38 +71,30 @@ export default function AssessmentHeader() {
             </svg>
 
             <div className="flex items-center gap-2">
-              <span
-                className={`text-xs font-bold uppercase tracking-wider ${
-                  isCritical
-                    ? "text-red-300"
-                    : isUrgent
-                      ? "text-amber-300"
-                      : "text-blue-300"
-                }`}
-              >
+              <span className="text-xs font-bold uppercase tracking-wider">
                 Time:
               </span>
+
               <span
-                className={`text-md font-bold tabular-nums ${
-                  isCritical
-                    ? "text-red-100"
-                    : isUrgent
-                      ? "text-amber-100"
-                      : "text-blue-100"
-                } ${isCritical ? "animate-pulse" : ""}`}
+                className={`text-md font-bold tabular-nums ${isCritical
+                  ? "text-red-100 animate-pulse"
+                  : isUrgent
+                    ? "text-amber-100"
+                    : "text-blue-100"
+                  }`}
               >
-                {formatTime(remaining)}
+                {formatTime(Math.max(0, remaining))}
               </span>
             </div>
           </div>
 
-          {/* Status Indicator */}
-          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 backdrop-blur-sm rounded-md border border-emerald-500/30">
+          {/* Live badge */}
+          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 rounded-md border border-emerald-500/30">
             <div className="relative">
-              <div className="w-2 h-2 bg-emerald-400 rounded-full"></div>
-              <div className="absolute inset-0 w-2 h-2 bg-emerald-400 rounded-full animate-ping"></div>
+              <div className="w-2 h-2 bg-emerald-400 rounded-full" />
+              <div className="absolute inset-0 w-2 h-2 bg-emerald-400 rounded-full animate-ping" />
             </div>
-            <span className="text-xs font-semibold text-emerald-300 uppercase tracking-wider">
+            <span className="text-xs font-semibold text-emerald-300 uppercase">
               Live
             </span>
           </div>

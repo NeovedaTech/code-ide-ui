@@ -129,9 +129,9 @@ export const AssessmentProvider: React.FC<AssessmentProviderProps> = ({
       setCurrResponse(response);
 
 
-      if (!assesment.data.isSubmitted && section.type === "coding") {
+      if (!assesment.data.isSubmitted && !assesment.data.hasAgreed && section.type === "coding") {
 
-        const currSolution = response.codingAnswers[0] as {};
+        const currSolution = response?.codingAnswers[0] as {};
         setIsSectionDone(section.problems.length === Object.keys(currSolution ?? {})?.length)
       }
       // setIsSectionDone(assesment.data)

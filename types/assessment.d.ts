@@ -37,6 +37,8 @@ export interface codingAnswer {
   [key: string]: {
     code: string;
     tokens: [string];
+    total: number;
+    passed: number;
   };
 }
 
@@ -47,7 +49,7 @@ export interface quizAnswer {
 export interface SectionResponse {
   sectionId: ObjectId;
   sectionType: "quiz" | "coding";
-  quizAnswers:quizAnswer[];
+  quizAnswers: quizAnswer[];
   codingAnswers: codingAnswer[];
   totalQuestions: number;
   correctAnswers: number;
@@ -195,7 +197,6 @@ export interface FunctionSignature {
   signature: string;
 }
 
-
 export type SubmtiSectionResponse = {
   solutionId: string;
   sectionId: string;
@@ -203,4 +204,4 @@ export type SubmtiSectionResponse = {
   sectionType: string;
   response: codingAnswer | quizAnswer;
   current: number;
-}
+};

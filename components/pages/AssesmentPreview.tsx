@@ -44,11 +44,40 @@ export default function AssessmentPreview({ solutionId }: AssessmentPreviewProps
     const quizSnapshot = assessmentData.assesmentSnapshot.find((s: any) => s.type === "quiz");
     const codingSnapshot = assessmentData.assesmentSnapshot.find((s: any) => s.type === "coding");
 
-    const totalMaxScore = assessmentData.assesmentSnapshot.reduce((sum: number, section: any) => sum + section.maxScore, 0);
-    const quizScore = quizSection?.correctAnswers || 0;
-    const codingScore = calculateCodingScore(codingSection, codingSnapshot);
+    // Check if quiz section has valid data
+    const hasQuizData = quizSection && quizSnapshot && quizSnapshot.type === "quiz" && quizSnapshot.questions.length > 0;
+
+    // Check if coding section has valid data
+    const hasCodingData = codingSection && codingSnapshot && codingSnapshot.type === "coding" && codingSnapshot.problems.length > 0;
+
+    // Calculate max scores based on actual question/test case counts
+    let totalMaxScore = 0;
+    let quizMaxScore = 0;
+    let codingMaxScore = 0;
+
+    if (hasQuizData) {
+        quizMaxScore = quizSnapshot.maxScore || 0;
+        totalMaxScore += quizMaxScore;
+    }
+
+    if (hasCodingData) {
+        const codingAnswers = codingSection.codingAnswers?.[0] || {};
+        let codingTotal = 0;
+        
+        Object.keys(codingAnswers).forEach((key) => {
+            if (codingAnswers[key]?.total) {
+                codingTotal += codingAnswers[key].total;
+            }
+        });
+        
+        codingMaxScore = codingTotal;
+        totalMaxScore += codingMaxScore;
+    }
+
+    const quizScore = hasQuizData ? (quizSection?.correctAnswers || 0) : 0;
+    const codingScore = hasCodingData ? calculateCodingScore(codingSection, codingSnapshot) : 0;
     const totalScore = quizScore + codingScore;
-    const percentageScore = ((totalScore / totalMaxScore) * 100).toFixed(1);
+    const percentageScore = totalMaxScore > 0 ? ((totalScore / totalMaxScore) * 100).toFixed(1) : 0;
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 py-8 px-4">
@@ -78,20 +107,24 @@ export default function AssessmentPreview({ solutionId }: AssessmentPreviewProps
 
                     {/* Score Breakdown Cards */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-8">
-                        <ScoreCard
-                            icon={<FileText className="w-8 h-8" />}
-                            title="Quiz Score"
-                            score={quizScore}
-                            maxScore={quizSnapshot?.maxScore || 0}
-                            color="blue"
-                        />
-                        <ScoreCard
-                            icon={<Code className="w-8 h-8" />}
-                            title="Coding Score"
-                            score={codingScore}
-                            maxScore={codingSnapshot?.maxScore || 0}
-                            color="purple"
-                        />
+                        {hasQuizData && (
+                            <ScoreCard
+                                icon={<FileText className="w-8 h-8" />}
+                                title="Quiz Score"
+                                score={quizScore}
+                                maxScore={quizMaxScore}
+                                color="blue"
+                            />
+                        )}
+                        {hasCodingData && (
+                            <ScoreCard
+                                icon={<Code className="w-8 h-8" />}
+                                title="Coding Score"
+                                score={codingScore}
+                                maxScore={codingMaxScore}
+                                color="purple"
+                            />
+                        )}
                         <ScoreCard
                             icon={<Award className="w-8 h-8" />}
                             title="Total Score"
@@ -102,8 +135,8 @@ export default function AssessmentPreview({ solutionId }: AssessmentPreviewProps
                     </div>
                 </div>
 
-                {/* Quiz Section */}
-                {quizSection && quizSnapshot && (
+                {/* Quiz Section - Only shows if quiz data exists */}
+                {hasQuizData && (
                     <div className="bg-white rounded-3xl shadow-xl p-8 mb-8">
                         <div className="flex items-center gap-3 mb-6">
                             <div className="p-3 bg-blue-100 rounded-xl">
@@ -116,16 +149,14 @@ export default function AssessmentPreview({ solutionId }: AssessmentPreviewProps
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-                            {quizSection.sectionType === "quiz" && quizSnapshot.type === "quiz" &&
-                                <StatCard
-                                    label="Questions Attempted"
-                                    value={`${Object.keys(quizSection.quizAnswers[0] || {}).length}/${quizSnapshot.questions.length}`}
-                                    icon={<Target />}
-                                />
-                            }
+                            <StatCard
+                                label="Questions Attempted"
+                                value={`${Object.keys(quizSection.quizAnswers?.[0] || {}).length}/${quizSnapshot.questions.length}`}
+                                icon={<Target />}
+                            />
                             <StatCard
                                 label="Correct Answers"
-                                value={quizSection.correctAnswers}
+                                value={quizSection.correctAnswers || 0}
                                 icon={<CheckCircle2 />}
                                 color="green"
                             />
@@ -143,15 +174,15 @@ export default function AssessmentPreview({ solutionId }: AssessmentPreviewProps
                         </div>
 
                         <QuizAnswersBreakdown
-                            questions={quizSnapshot.type === "quiz" ? quizSnapshot.questions : []}
-                            userAnswers={quizSection.sectionType === "quiz" ? quizSection.quizAnswers[0] ?? {} : {}}
+                            questions={quizSnapshot.questions || []}
+                            userAnswers={quizSection.quizAnswers?.[0] || {}}
                         />
                     </div>
                 )}
 
-                {/* Coding Section */}
-                {codingSection && codingSnapshot && (
-                    <div className="bg-white rounded-3xl shadow-xl p-8">
+                {/* Coding Section - Only shows if coding data exists */}
+                {hasCodingData && (
+                    <div className="bg-white rounded-3xl shadow-xl p-8 mb-8">
                         <div className="flex items-center gap-3 mb-6">
                             <div className="p-3 bg-purple-100 rounded-xl">
                                 <Code className="w-6 h-6 text-purple-600" />
@@ -163,48 +194,43 @@ export default function AssessmentPreview({ solutionId }: AssessmentPreviewProps
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-                            {codingSnapshot.type === "coding" &&
-                                <>
-                                    <StatCard
-                                        label="Problems"
-                                        value={codingSnapshot.problems.length}
-                                        icon={<Code />}
-                                    />
-                                    <StatCard
-                                        label="Test Cases Passed"
-                                        value={calculateTotalPassedTests(codingSection)}
-                                        icon={<CheckCircle2 />}
-                                        color="green"
-                                    />
-                                    <StatCard
-                                        label="Time Limit"
-                                        value={`${codingSnapshot.maxTime} min`}
-                                        icon={<Clock />}
-                                    />
-                                    <StatCard
-                                        label="Max Score"
-                                        value={codingSnapshot.maxScore}
-                                        icon={<Award />}
-                                        color="purple"
-                                    />
-                                </>
-                            }
-
+                            <StatCard
+                                label="Problems"
+                                value={codingSnapshot.problems.length}
+                                icon={<Code />}
+                            />
+                            <StatCard
+                                label="Test Cases Passed"
+                                value={calculateTotalPassedTests(codingSection)}
+                                icon={<CheckCircle2 />}
+                                color="green"
+                            />
+                            <StatCard
+                                label="Time Limit"
+                                value={`${codingSnapshot.maxTime} min`}
+                                icon={<Clock />}
+                            />
+                            <StatCard
+                                label="Max Score"
+                                value={codingMaxScore}
+                                icon={<Award />}
+                                color="purple"
+                            />
                         </div>
 
                         <CodingProblemsBreakdown
-                            problems={codingSnapshot.type === "coding" ? codingSnapshot.problems : []}
-                            userAnswers={codingSection.codingAnswers[0] || {}}
+                            problems={codingSnapshot.problems || []}
+                            userAnswers={codingSection.codingAnswers?.[0] || {}}
                         />
                     </div>
                 )}
 
                 {/* Performance Insights */}
                 <PerformanceInsights
-                    quizSection={quizSection}
-                    codingSection={codingSection}
-                    quizSnapshot={quizSnapshot}
-                    codingSnapshot={codingSnapshot}
+                    quizSection={hasQuizData ? quizSection : null}
+                    codingSection={hasCodingData ? codingSection : null}
+                    quizSnapshot={hasQuizData ? quizSnapshot : null}
+                    codingSnapshot={hasCodingData ? codingSnapshot : null}
                 />
             </div>
         </div>
@@ -280,6 +306,10 @@ interface QuizAnswersBreakdownProps {
 }
 
 function QuizAnswersBreakdown({ questions, userAnswers }: QuizAnswersBreakdownProps) {
+    if (!questions || questions.length === 0) {
+        return null;
+    }
+
     const answeredQuestions = questions.filter(q => userAnswers[q._id]);
 
     if (answeredQuestions.length === 0) {
@@ -350,6 +380,10 @@ interface CodingProblemsBreakdownProps {
 }
 
 function CodingProblemsBreakdown({ problems, userAnswers }: CodingProblemsBreakdownProps) {
+    if (!problems || problems.length === 0) {
+        return null;
+    }
+
     return (
         <div className="space-y-6">
             <h3 className="text-xl font-bold text-slate-800 mb-4">Problem Solutions</h3>
@@ -440,9 +474,9 @@ interface PerformanceInsightsProps {
 function PerformanceInsights({ quizSection, codingSection, quizSnapshot, codingSnapshot }: PerformanceInsightsProps) {
     const insights = [];
 
-    // Quiz insights
-    if (quizSection && quizSnapshot) {
-        const attemptedCount = Object.keys(quizSection.quizAnswers[0] || {}).length;
+    // Quiz insights - only if quiz data exists
+    if (quizSection && quizSnapshot && quizSnapshot.questions && quizSnapshot.questions.length > 0) {
+        const attemptedCount = Object.keys(quizSection.quizAnswers?.[0] || {}).length;
         const totalQuestions = quizSnapshot.questions.length;
         const attemptRate = (attemptedCount / totalQuestions) * 100;
         const accuracy = attemptedCount > 0 ? (quizSection.correctAnswers / attemptedCount) * 100 : 0;
@@ -470,11 +504,11 @@ function PerformanceInsights({ quizSection, codingSection, quizSnapshot, codingS
         }
     }
 
-    // Coding insights
-    if (codingSection && codingSnapshot) {
+    // Coding insights - only if coding data exists
+    if (codingSection && codingSnapshot && codingSnapshot.problems && codingSnapshot.problems.length > 0) {
         const totalTestsPassed = calculateTotalPassedTests(codingSection);
         const totalTests = calculateTotalTests(codingSection);
-        const codingSuccessRate = totalTests > 0 ? (Number(totalTestsPassed) / totalTests) * 100 : 0;
+        const codingSuccessRate = totalTests > 0 ? (Number(totalTestsPassed.split('/')[0]) / totalTests) * 100 : 0;
 
         if (codingSuccessRate === 0 && totalTests > 0) {
             insights.push({
@@ -486,13 +520,13 @@ function PerformanceInsights({ quizSection, codingSection, quizSnapshot, codingS
             insights.push({
                 type: 'warning',
                 title: 'Partial Solutions',
-                message: `You passed ${totalTestsPassed} out of ${totalTests} test cases. Work on edge cases and complete implementations.`
+                message: `You passed ${totalTestsPassed.split('/')[0]} out of ${totalTests} test cases. Work on edge cases and complete implementations.`
             });
         } else if (codingSuccessRate >= 80) {
             insights.push({
                 type: 'success',
                 title: 'Excellent Coding Performance',
-                message: `You passed ${totalTestsPassed} out of ${totalTests} test cases (${codingSuccessRate.toFixed(0)}%). Outstanding work!`
+                message: `You passed ${totalTestsPassed.split('/')[0]} out of ${totalTests} test cases (${codingSuccessRate.toFixed(0)}%). Outstanding work!`
             });
         }
     }
@@ -536,52 +570,48 @@ function PerformanceInsights({ quizSection, codingSection, quizSnapshot, codingS
 // Helper Functions
 
 function calculateCodingScore(codingSection: any, codingSnapshot: any): number {
-    if (!codingSection || !codingSnapshot) return 0;
+    if (!codingSection) return 0;
 
-    const userAnswers = codingSection.codingAnswers[0] || {};
-    const problems = codingSnapshot.problems;
-    const maxScore = codingSnapshot.maxScore;
-    const scorePerProblem = maxScore / problems.length;
+    const codingAnswers = codingSection.codingAnswers?.[0] || {};
+    let totalPassed = 0;
 
-    let totalScore = 0;
-
-    problems.forEach((problem: any) => {
-        const submission = userAnswers[problem._id];
-        if (submission) {
-            const passRate = submission.total > 0 ? submission.passed / submission.total : 0;
-            totalScore += scorePerProblem * passRate;
+    Object.keys(codingAnswers).forEach((key) => {
+        if (codingAnswers[key]?.passed) {
+            totalPassed += codingAnswers[key].passed;
         }
     });
 
-    return Math.round(totalScore * 10) / 10; // Round to 1 decimal place
+    return totalPassed;
 }
 
 function calculateTotalPassedTests(codingSection: any): string {
     if (!codingSection) return '0/0';
 
-    const userAnswers = codingSection.codingAnswers[0] || {};
+    const codingAnswers = codingSection.codingAnswers?.[0] || {};
     let totalPassed = 0;
     let totalTests = 0;
 
-    Object.values(userAnswers).forEach((submission: any) => {
-        if (submission) {
-            totalPassed += submission.passed || 0;
-            totalTests += submission.total || 0;
+    Object.keys(codingAnswers).forEach((key) => {
+        if (codingAnswers[key]?.passed) {
+            totalPassed += codingAnswers[key].passed;
+        }
+        if (codingAnswers[key]?.total) {
+            totalTests += codingAnswers[key].total;
         }
     });
 
-    return `${totalPassed}/${totalTests}`;
+    return totalTests > 0 ? `${totalPassed}/${totalTests}` : '0/0';
 }
 
 function calculateTotalTests(codingSection: any): number {
     if (!codingSection) return 0;
 
-    const userAnswers = codingSection.codingAnswers[0] || {};
+    const codingAnswers = codingSection.codingAnswers?.[0] || {};
     let totalTests = 0;
 
-    Object.values(userAnswers).forEach((submission: any) => {
-        if (submission) {
-            totalTests += submission.total || 0;
+    Object.keys(codingAnswers).forEach((key) => {
+        if (codingAnswers[key]?.total) {
+            totalTests += codingAnswers[key].total;
         }
     });
 
