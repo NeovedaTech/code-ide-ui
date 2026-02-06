@@ -216,14 +216,11 @@ const features = [
 ];
 
 const stats = [
-  { value: "98%", label: "Assessment Accuracy", color: "#3b82f6" },
-  { value: "2M+", label: "Assessments Completed", color: "#8b5cf6" },
-  { value: "45%", label: "Faster Learning Growth", color: "#ec4899" },
-  { value: "99.9%", label: "Uptime Guarantee", color: "#10b981" },
+  { value: "94%", label: "Assessment Accuracy", color: "#3b82f6" },
+  { value: "35%", label: "Faster Learning Growth", color: "#8b5cf6" },
+  { value: "99.5%", label: "Uptime Guarantee", color: "#ec4899" },
 ];
 
-// Assessment credentials for demo
-const ASSESSMENT_ID = "6984415ac5f11adf882af70c";
 const ASSESSMENT_ID_EASY = "6984415ac5f11adf882af70c";
 const ASSESSMENT_ID_HARD = "69844287c5f11adf882afdb0";
 
