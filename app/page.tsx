@@ -975,7 +975,6 @@ export default function Page() {
                 >
                   <MenuItem value="easy">🟢 Easy - Beginner</MenuItem>
                   <MenuItem value="medium">🟡 Medium - Intermediate</MenuItem>
-                  <MenuItem value="hard">🔴 Hard - Advanced</MenuItem>
                 </Select>
               </FormControl>
 
