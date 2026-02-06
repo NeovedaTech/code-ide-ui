@@ -1,5 +1,4 @@
 "use client";
-
 import { useState } from "react";
 import {
   AppBar,
@@ -131,7 +130,8 @@ const StatCard = styled(Card)({
 });
 
 const CTASection = styled(Paper)(({ theme }) => ({
-  background: "linear-gradient(135deg, rgba(15, 15, 15, 0.95) 0%, rgba(20, 20, 20, 0.95) 100%)",
+  background:
+    "linear-gradient(135deg, rgba(15, 15, 15, 0.95) 0%, rgba(20, 20, 20, 0.95) 100%)",
   border: "2px solid rgba(59, 130, 246, 0.3)",
   borderRadius: "24px",
   backdropFilter: "blur(20px)",
@@ -157,6 +157,7 @@ const FormDialog = styled(Dialog)(({ theme }) => ({
     backgroundColor: "rgba(10, 10, 10, 0.98)",
     border: "2px solid rgba(59, 130, 246, 0.3)",
     borderRadius: "20px",
+    color:"#fff",
     backdropFilter: "blur(30px)",
     boxShadow: "0 24px 80px rgba(0, 0, 0, 0.8)",
   },
@@ -169,7 +170,8 @@ const GlowingIconBox = styled(Box)({
   width: "64px",
   height: "64px",
   borderRadius: "16px",
-  background: "linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.1))",
+  background:
+    "linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.1))",
   border: "1px solid rgba(59, 130, 246, 0.3)",
   fontSize: "2rem",
   marginBottom: "16px",
@@ -235,6 +237,9 @@ export default function Page() {
   const [openForm, setOpenForm] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [showError, setShowError] = useState(false);
+  const [openConfirmDialog, setOpenConfirmDialog] = useState(false);
+  const [confirmationInput, setConfirmationInput] = useState("");
+  const [confirmationError, setConfirmationError] = useState("");
 
   const handleTryNow = () => {
     setOpenForm(true);
@@ -256,40 +261,56 @@ export default function Page() {
     }));
   };
 
-  const handleFormSubmit = async (e: React.FormEvent) => {
+  const handleOpenConfirmDialog = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validate form fields on client side
+    if (!formData.name.trim()) {
+      setErrorMessage("Please enter your full name");
+      setShowError(true);
+      return;
+    }
+    if (!formData.email.trim()) {
+      setErrorMessage("Please enter your email address");
+      setShowError(true);
+      return;
+    }
+
+    // Open confirmation dialog instead of submitting directly
+    setConfirmationInput("");
+    setConfirmationError("");
+    setOpenConfirmDialog(true);
+  };
+
+  const handleConfirmationSubmit = async () => {
+    const expectedInput = formData.skillLevel;
+
+    if (confirmationInput.toLowerCase() !== expectedInput.toLowerCase()) {
+      setConfirmationError(
+        `Please type "${expectedInput}" to confirm your skill level`
+      );
+      return;
+    }
+
     setLoading(true);
-    setErrorMessage("");
-    setShowError(false);
+    setConfirmationError("");
 
     try {
-      // Validate form fields on client side
-      if (!formData.name.trim()) {
-        setErrorMessage("Please enter your full name");
-        setShowError(true);
-        setLoading(false);
-        return;
-      }
-
-      if (!formData.email.trim()) {
-        setErrorMessage("Please enter your email address");
-        setShowError(true);
-        setLoading(false);
-        return;
-      }
-
       // Call API to register user and get userId
-      const response = await fetch(NEXT_PUBLIC_API_URL + "/api/v1/user/register", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          name: formData.name,
-          email: formData.email,
-          skillLevel: formData.skillLevel,
-        }),
-      });
+      const response = await fetch(
+        NEXT_PUBLIC_API_URL + "/api/v1/user/register",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: formData.name,
+            email: formData.email,
+            skillLevel: formData.skillLevel,
+          }),
+        }
+      );
 
       const data = await response.json();
 
@@ -298,6 +319,7 @@ export default function Page() {
         setErrorMessage(data.error || "Failed to register. Please try again.");
         setShowError(true);
         setLoading(false);
+        setOpenConfirmDialog(false);
         return;
       }
 
@@ -305,6 +327,7 @@ export default function Page() {
         setErrorMessage(data.error || "Failed to register. Please try again.");
         setShowError(true);
         setLoading(false);
+        setOpenConfirmDialog(false);
         return;
       }
 
@@ -330,12 +353,13 @@ export default function Page() {
         skillLevel: "easy",
       });
       setOpenForm(false);
+      setOpenConfirmDialog(false);
     } catch (error) {
       console.error("Error:", error);
       setErrorMessage(
         error instanceof Error
           ? error.message
-          : "An unexpected error occurred. Please try again.",
+          : "An unexpected error occurred. Please try again."
       );
       setShowError(true);
     } finally {
@@ -350,730 +374,756 @@ export default function Page() {
   return (
     <>
       {/* Navigation */}
-      <StyledAppBar position="sticky">
-        <Toolbar sx={{ py: 1 }}>
-          <Box sx={{ display: "flex", alignItems: "center", flex: 1 }}>
-            <Image src={"/logo.png"} height={40} width={200} alt="Loog"/>
+      <StyledAppBar>
+        <Toolbar sx={{ justifyContent: "space-between" }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+            <Image
+              src="/logo.png"
+              alt="Knovia AI"
+              width={32}
+              height={32}
+              priority
+            />
+            <Typography
+              variant="h6"
+              sx={{ fontWeight: 700, fontSize: "1.25rem" }}
+            >
+              Knovia AI
+            </Typography>
           </Box>
-          <Stack direction="row" spacing={2}>
-            <StyledButton variant="outlined" onClick={handleTryNow} size="small">
-              Start Assessment
-            </StyledButton>
-            <StyledButton variant="contained" size="small">
-              Sign In
-            </StyledButton>
-          </Stack>
+          <Box sx={{ display: "flex", gap: 2 }}>
+            <StyledButton variant="outlined">Start Assessment</StyledButton>
+            <StyledButton variant="outlined">Sign In</StyledButton>
+          </Box>
         </Toolbar>
       </StyledAppBar>
 
       {/* Hero Section */}
       <HeroBackground>
-        <Container maxWidth="lg" sx={{ py: 16, position: "relative", zIndex: 1 }}>
+        <Container maxWidth="lg" sx={{ pt: 12, pb: 8 }}>
           {/* Hero Content */}
-          <Box sx={{ textAlign: "center", mb: 10 }}>
-            <Chip
-              label="✨ Powered by Advanced AI"
-              sx={{
-                mb: 3,
-                backgroundColor: "rgba(59, 130, 246, 0.1)",
-                border: "1px solid rgba(59, 130, 246, 0.3)",
-                color: "#60a5fa",
-                fontWeight: 600,
-                fontSize: "0.9rem",
-                padding: "4px 8px",
-              }}
-            />
-            <Typography
-              variant="h2"
-              sx={{
-                mb: 3,
-                fontWeight: 800,
-                fontSize: { xs: "2.5rem", md: "3.5rem" },
-                lineHeight: 1.2,
-                color: "white",
-              }}
-            >
+          <Box sx={{ textAlign: "center", mb: 12 }}>
+            <GradientText variant="h2" sx={{ mb: 3, fontSize: "3.5rem" }}>
               AI-Powered Assessments
-            </Typography>
-            <GradientText
-              variant="h3"
+            </GradientText>
+            <Typography
+              variant="h5"
               sx={{
+                color: "rgba(255, 255, 255, 0.8)",
                 mb: 4,
-                fontSize: { xs: "1.75rem", md: "2.5rem" },
-                lineHeight: 1.3,
+                maxWidth: "600px",
+                mx: "auto",
               }}
             >
               Transform Learning with Intelligent Assessments
-            </GradientText>
+            </Typography>
             <Typography
-              variant="h6"
               sx={{
+                color: "rgba(255, 255, 255, 0.6)",
                 mb: 6,
-                color: "white",
-                maxWidth: 700,
+                maxWidth: "700px",
                 mx: "auto",
-                lineHeight: 1.7,
-                fontSize: "1.125rem",
-                opacity: 0.9,
+                fontSize: "1.1rem",
+                lineHeight: 1.8,
               }}
             >
               Knovia AI delivers adaptive, personalized assessments that
               understand each learner. Measure progress, identify gaps, and
               unlock potential with cutting-edge AI technology.
             </Typography>
-            <Stack direction={{ xs: "column", sm: "row" }} justifyContent="center">
+            <Box sx={{ display: "flex", gap: 3, justifyContent: "center" }}>
               <StyledButton
                 variant="contained"
                 onClick={handleGetStarted}
-                size="large"
-                sx={{ minWidth: 200 }}
+                sx={{ fontSize: "1.1rem" }}
               >
                 Get Started Free →
               </StyledButton>
-              <StyledButton
+              <Button
                 variant="outlined"
-                onClick={handleTryNow}
-                size="large"
-                sx={{ minWidth: 200 }}
+                sx={{
+                  borderColor: "rgba(255, 255, 255, 0.3)",
+                  color: "white",
+                  borderRadius: "12px",
+                  padding: "12px 36px",
+                  fontSize: "1rem",
+                  fontWeight: 600,
+                  "&:hover": {
+                    backgroundColor: "rgba(255, 255, 255, 0.05)",
+                    borderColor: "rgba(255, 255, 255, 0.5)",
+                  },
+                }}
               >
                 🎯 Start Assessment
-              </StyledButton>
-            </Stack>
+              </Button>
+            </Box>
           </Box>
 
           {/* Hero Stats */}
-          <Box  sx={{ mb: 12 }}>
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: {
+                xs: "1fr",
+                sm: "repeat(3, 1fr)",
+              },
+              gap: 4,
+              mb: 8,
+            }}
+          >
             {stats.map((stat, idx) => (
-              <Box>
-                <StatCard>
-                  <CardContent sx={{ textAlign: "center", py: 3 }}>
-                    <Typography
-                      variant="h3"
-                      sx={{
-                        color: stat.color,
-                        fontWeight: "bold",
-                        mb: 1,
-                        fontSize: { xs: "2rem", md: "2.5rem" },
-                      }}
-                    >
-                      {stat.value}
-                    </Typography>
-                    <Typography
-                      variant="body2"
-                      sx={{
-                        color: "white",
-                        fontSize: "0.95rem",
-                        opacity: 0.8,
-                      }}
-                    >
-                      {stat.label}
-                    </Typography>
-                  </CardContent>
-                </StatCard>
-             </Box>
+              <StatCard key={idx}>
+                <CardContent sx={{ textAlign: "center", py: 4 }}>
+                  <Typography
+                    variant="h4"
+                    sx={{
+                      color: stat.color,
+                      fontWeight: 700,
+                      mb: 1,
+                    }}
+                  >
+                    {stat.value}
+                  </Typography>
+                  <Typography sx={{ color: "rgba(255, 255, 255, 0.7)" }}>
+                    {stat.label}
+                  </Typography>
+                </CardContent>
+              </StatCard>
             ))}
-         </Box>
-
-          {/* Features Section */}
-          <Box sx={{ mb: 12 }}>
-            <Box sx={{ textAlign: "center", mb: 8 }}>
-              <Typography
-                variant="h3"
-                sx={{ fontWeight: "bold", mb: 2, fontSize: { xs: "2rem", md: "2.5rem" }, color: "white" }}
-              >
-                Powerful Features
-              </Typography>
-              <Typography
-                variant="body1"
-                sx={{ color: "white", maxWidth: 600, mx: "auto", opacity: 0.8 }}
-              >
-                Everything you need to create engaging, effective assessments
-              </Typography>
-            </Box>
-            <Box >
-              {features.map((feature, idx) => (
-                <Box  key={idx}>
-                  <FeatureCard>
-                    <CardContent sx={{ p: 4 }}>
-                      <GlowingIconBox>{feature.icon}</GlowingIconBox>
-                      <Typography
-                        variant="h5"
-                        sx={{
-                          mb: 2,
-                          fontWeight: "bold",
-                          fontSize: "1.25rem",
-                          color: "white",
-                        }}
-                      >
-                        {feature.title}
-                      </Typography>
-                      <Typography
-                        variant="body2"
-                        sx={{
-                          color: "white",
-                          lineHeight: 1.7,
-                          fontSize: "1rem",
-                          opacity: 0.9,
-                        }}
-                      >
-                        {feature.desc}
-                      </Typography>
-                    </CardContent>
-                  </FeatureCard>
-               </Box>
-              ))}
-           </Box>
           </Box>
-
-          {/* How It Works Section */}
-          <Box sx={{ mb: 12 }}>
-            <Box sx={{ textAlign: "center", mb: 8 }}>
-              <Typography
-                variant="h3"
-                sx={{ fontWeight: "bold", mb: 2, fontSize: { xs: "2rem", md: "2.5rem" }, color: "white" }}
-              >
-                How Knovia AI Works
-              </Typography>
-              <Typography
-                variant="body1"
-                sx={{ color: "white", maxWidth: 600, mx: "auto", opacity: 0.9 }}
-              >
-                Experience intelligent assessments in three simple steps
-              </Typography>
-            </Box>
-            <Box>
-              <Box >
-                <FeatureCard>
-                  <CardContent sx={{ p: 4, textAlign: "center" }}>
-                    <Box
-                      sx={{
-                        width: 80,
-                        height: 80,
-                        borderRadius: "50%",
-                        background: "linear-gradient(135deg, #3b82f6, #8b5cf6)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        margin: "0 auto 24px",
-                        fontSize: "2.5rem",
-                        fontWeight: "bold",
-                        color: "white",
-                      }}
-                    >
-                      1
-                    </Box>
-                    <Typography variant="h5" sx={{ mb: 2, fontWeight: "bold", color: "white" }}>
-                      Create Your Assessment
-                    </Typography>
-                    <Typography variant="body1" sx={{ color: "white", opacity: 0.9, lineHeight: 1.7 }}>
-                      Choose from our pre-built templates or create custom assessments tailored to your learning objectives. Our AI helps you design effective questions.
-                    </Typography>
-                  </CardContent>
-                </FeatureCard>
-             </Box>
-              <Box >
-                <FeatureCard>
-                  <CardContent sx={{ p: 4, textAlign: "center" }}>
-                    <Box
-                      sx={{
-                        width: 80,
-                        height: 80,
-                        borderRadius: "50%",
-                        background: "linear-gradient(135deg, #8b5cf6, #ec4899)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        margin: "0 auto 24px",
-                        fontSize: "2.5rem",
-                        fontWeight: "bold",
-                        color: "white",
-                      }}
-                    >
-                      2
-                    </Box>
-                    <Typography variant="h5" sx={{ mb: 2, fontWeight: "bold", color: "white" }}>
-                      AI Adapts in Real-Time
-                    </Typography>
-                    <Typography variant="body1" sx={{ color: "white", opacity: 0.9, lineHeight: 1.7 }}>
-                      As learners take the assessment, our AI dynamically adjusts difficulty based on their responses, ensuring an optimal challenge level for everyone.
-                    </Typography>
-                  </CardContent>
-                </FeatureCard>
-             </Box>
-              <Box >
-                <FeatureCard>
-                  <CardContent sx={{ p: 4, textAlign: "center" }}>
-                    <Box
-                      sx={{
-                        width: 80,
-                        height: 80,
-                        borderRadius: "50%",
-                        background: "linear-gradient(135deg, #ec4899, #10b981)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        margin: "0 auto 24px",
-                        fontSize: "2.5rem",
-                        fontWeight: "bold",
-                        color: "white",
-                      }}
-                    >
-                      3
-                    </Box>
-                    <Typography variant="h5" sx={{ mb: 2, fontWeight: "bold", color: "white" }}>
-                      Get Actionable Insights
-                    </Typography>
-                    <Typography variant="body1" sx={{ color: "white", opacity: 0.9, lineHeight: 1.7 }}>
-                      Receive comprehensive analytics and personalized recommendations to help learners improve. Track progress over time with detailed reports.
-                    </Typography>
-                  </CardContent>
-                </FeatureCard>
-             </Box>
-           </Box>
-          </Box>
-
-          {/* Benefits Section */}
-          <CTASection elevation={0}>
-            <Box sx={{ position: "relative", zIndex: 1 }}>
-              <Typography
-                variant="h3"
-                sx={{
-                  mb: 3,
-                  textAlign: "center",
-                  fontWeight: "bold",
-                  fontSize: { xs: "1.75rem", md: "2.25rem" },
-                  color: "white",
-                }}
-              >
-                Why Choose Knovia AI?
-              </Typography>
-              <Typography
-                variant="body1"
-                sx={{
-                  mb: 5,
-                  textAlign: "center",
-                  color: "white",
-                  fontSize: "1.125rem",
-                  opacity: 0.9,
-                }}
-              >
-                Join thousands of educators and institutions transforming their assessment process
-              </Typography>
-              <Box >
-                <Box>
-                  <Box sx={{ display: "flex", alignItems: "start", mb: 3 }}>
-                    <Box
-                      sx={{
-                        minWidth: 48,
-                        height: 48,
-                        borderRadius: "12px",
-                        background: "linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(139, 92, 246, 0.2))",
-                        border: "1px solid rgba(59, 130, 246, 0.3)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        mr: 3,
-                        fontSize: "1.5rem",
-                      }}
-                    >
-                      ✓
-                    </Box>
-                    <Box>
-                      <Typography variant="h6" sx={{ mb: 1, fontWeight: "bold", color: "white" }}>
-                        Save Time & Resources
-                      </Typography>
-                      <Typography variant="body2" sx={{ color: "white", opacity: 0.85, lineHeight: 1.6 }}>
-                        Automate grading and assessment creation, reducing administrative burden by up to 70% while improving accuracy.
-                      </Typography>
-                    </Box>
-                  </Box>
-               </Box>
-                <Box>
-                  <Box sx={{ display: "flex", alignItems: "start", mb: 3 }}>
-                    <Box
-                      sx={{
-                        minWidth: 48,
-                        height: 48,
-                        borderRadius: "12px",
-                        background: "linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(139, 92, 246, 0.2))",
-                        border: "1px solid rgba(59, 130, 246, 0.3)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        mr: 3,
-                        fontSize: "1.5rem",
-                      }}
-                    >
-                      ✓
-                    </Box>
-                    <Box>
-                      <Typography variant="h6" sx={{ mb: 1, fontWeight: "bold", color: "white" }}>
-                        Personalized Learning Paths
-                      </Typography>
-                      <Typography variant="body2" sx={{ color: "white", opacity: 0.85, lineHeight: 1.6 }}>
-                        AI identifies individual strengths and weaknesses, creating customized learning recommendations for each student.
-                      </Typography>
-                    </Box>
-                  </Box>
-               </Box>
-                <Box>
-                  <Box sx={{ display: "flex", alignItems: "start", mb: 3 }}>
-                    <Box
-                      sx={{
-                        minWidth: 48,
-                        height: 48,
-                        borderRadius: "12px",
-                        background: "linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(139, 92, 246, 0.2))",
-                        border: "1px solid rgba(59, 130, 246, 0.3)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        mr: 3,
-                        fontSize: "1.5rem",
-                      }}
-                    >
-                      ✓
-                    </Box>
-                    <Box>
-                      <Typography variant="h6" sx={{ mb: 1, fontWeight: "bold", color: "white" }}>
-                        Data-Driven Decisions
-                      </Typography>
-                      <Typography variant="body2" sx={{ color: "white", opacity: 0.85, lineHeight: 1.6 }}>
-                        Make informed decisions with comprehensive analytics, trend analysis, and predictive insights about learner performance.
-                      </Typography>
-                    </Box>
-                  </Box>
-               </Box>
-                <Box>
-                  <Box sx={{ display: "flex", alignItems: "start", mb: 3 }}>
-                    <Box
-                      sx={{
-                        minWidth: 48,
-                        height: 48,
-                        borderRadius: "12px",
-                        background: "linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(139, 92, 246, 0.2))",
-                        border: "1px solid rgba(59, 130, 246, 0.3)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        mr: 3,
-                        fontSize: "1.5rem",
-                      }}
-                    >
-                      ✓
-                    </Box>
-                    <Box>
-                      <Typography variant="h6" sx={{ mb: 1, fontWeight: "bold", color: "white" }}>
-                        Scalable & Flexible
-                      </Typography>
-                      <Typography variant="body2" sx={{ color: "white", opacity: 0.85, lineHeight: 1.6 }}>
-                        From individual educators to large institutions, our platform scales seamlessly to meet your needs without compromising quality.
-                      </Typography>
-                    </Box>
-                  </Box>
-               </Box>
-             </Box>
-              <Box sx={{ textAlign: "center", mt: 5 }}>
-                <StyledButton variant="contained" size="large" onClick={handleTryNow}>
-                  Try Demo Assessment Now →
-                </StyledButton>
-                <Typography
-                  variant="caption"
-                  sx={{
-                    display: "block",
-                    mt: 2,
-                    color: "white",
-                    fontSize: "0.875rem",
-                    opacity: 0.7,
-                  }}
-                >
-                  🔒 No registration required for demo • Experience AI-powered assessments instantly
-                </Typography>
-              </Box>
-            </Box>
-          </CTASection>
         </Container>
       </HeroBackground>
 
+      {/* Features Section */}
+      <Box
+        sx={{
+          background: "#000000",
+          py: 12,
+          backgroundImage: `
+            radial-gradient(circle at 20% 50%, rgba(59, 130, 246, 0.05) 0%, transparent 50%),
+            radial-gradient(circle at 80% 50%, rgba(139, 92, 246, 0.05) 0%, transparent 50%)
+          `,
+        }}
+      >
+        <Container maxWidth="lg">
+          <Box sx={{ textAlign: "center", mb: 12 }}>
+            <GradientText variant="h3" sx={{ mb: 2 }}>
+              Powerful Features
+            </GradientText>
+            <Typography sx={{ color: "rgba(255, 255, 255, 0.6)", fontSize: "1.1rem" }}>
+              Everything you need to create engaging, effective assessments
+            </Typography>
+          </Box>
+
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: {
+                xs: "1fr",
+                sm: "repeat(2, 1fr)",
+                md: "repeat(3, 1fr)",
+              },
+              gap: 4,
+            }}
+          >
+            {features.map((feature, idx) => (
+              <FeatureCard key={idx}>
+                <CardContent sx={{ p: 4 }}>
+                  <GlowingIconBox>{feature.icon}</GlowingIconBox>
+                  <Typography
+                    variant="h6"
+                    sx={{
+                      fontWeight: 700,
+                      mb: 2,
+                      color: "white",
+                    }}
+                  >
+                    {feature.title}
+                  </Typography>
+                  <Typography sx={{ color: "rgba(255, 255, 255, 0.6)" }}>
+                    {feature.desc}
+                  </Typography>
+                </CardContent>
+              </FeatureCard>
+            ))}
+          </Box>
+        </Container>
+      </Box>
+
+      {/* How It Works Section */}
+      <Box sx={{ background: "#000000", py: 12 }}>
+        <Container maxWidth="lg">
+          <Box sx={{ textAlign: "center", mb: 12 }}>
+            <GradientText variant="h3" sx={{ mb: 2 }}>
+              How Knovia AI Works
+            </GradientText>
+            <Typography sx={{ color: "rgba(255, 255, 255, 0.6)", fontSize: "1.1rem" }}>
+              Experience intelligent assessments in three simple steps
+            </Typography>
+          </Box>
+
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: {
+                xs: "1fr",
+                md: "repeat(3, 1fr)",
+              },
+              gap: 6,
+            }}
+          >
+            {[
+              {
+                num: "1",
+                title: "Create Your Assessment",
+                desc: "Choose from our pre-built templates or create custom assessments tailored to your learning objectives. Our AI helps you design effective questions.",
+              },
+              {
+                num: "2",
+                title: "AI Adapts in Real-Time",
+                desc: "As learners take the assessment, our AI dynamically adjusts difficulty based on their responses, ensuring an optimal challenge level for everyone.",
+              },
+              {
+                num: "3",
+                title: "Get Actionable Insights",
+                desc: "Receive comprehensive analytics and personalized recommendations to help learners improve. Track progress over time with detailed reports.",
+              },
+            ].map((step, idx) => (
+              <Card
+                key={idx}
+                sx={{
+                  backgroundColor: "rgba(15, 15, 15, 0.8)",
+                  border: "1px solid rgba(59, 130, 246, 0.2)",
+                  borderRadius: "16px",
+                  backdropFilter: "blur(20px)",
+                }}
+              >
+                <CardContent sx={{ p: 4 }}>
+                  <Typography
+                    sx={{
+                      fontSize: "3rem",
+                      fontWeight: 700,
+                      color: "#3b82f6",
+                      mb: 2,
+                    }}
+                  >
+                    {step.num}
+                  </Typography>
+                  <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
+                    {step.title}
+                  </Typography>
+                  <Typography sx={{ color: "rgba(255, 255, 255, 0.6)" }}>
+                    {step.desc}
+                  </Typography>
+                </CardContent>
+              </Card>
+            ))}
+          </Box>
+        </Container>
+      </Box>
+
+      {/* Benefits Section */}
+      <Box
+        sx={{
+          background: "#000000",
+          py: 12,
+          backgroundImage: `
+            radial-gradient(circle at 30% 30%, rgba(236, 72, 153, 0.05) 0%, transparent 50%)
+          `,
+        }}
+      >
+        <Container maxWidth="lg">
+          <Box sx={{ textAlign: "center", mb: 12 }}>
+            <GradientText variant="h3" sx={{ mb: 2 }}>
+              Why Choose Knovia AI?
+            </GradientText>
+            <Typography sx={{ color: "rgba(255, 255, 255, 0.6)", fontSize: "1.1rem" }}>
+              Join thousands of educators and institutions transforming their
+              assessment process
+            </Typography>
+          </Box>
+
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: {
+                xs: "1fr",
+                md: "repeat(2, 1fr)",
+              },
+              gap: 4,
+              mb: 8,
+            }}
+          >
+            {[
+              {
+                title: "Save Time & Resources",
+                desc: "Automate grading and assessment creation, reducing administrative burden by up to 70% while improving accuracy.",
+              },
+              {
+                title: "Personalized Learning Paths",
+                desc: "AI identifies individual strengths and weaknesses, creating customized learning recommendations for each student.",
+              },
+              {
+                title: "Data-Driven Decisions",
+                desc: "Make informed decisions with comprehensive analytics, trend analysis, and predictive insights about learner performance.",
+              },
+              {
+                title: "Scalable & Flexible",
+                desc: "From individual educators to large institutions, our platform scales seamlessly to meet your needs without compromising quality.",
+              },
+            ].map((benefit, idx) => (
+              <Card
+                key={idx}
+                sx={{
+                  backgroundColor: "rgba(15, 15, 15, 0.8)",
+                  border: "1px solid rgba(59, 130, 246, 0.2)",
+                  borderRadius: "16px",
+                  backdropFilter: "blur(20px)",
+                  p: 2,
+                }}
+              >
+                <CardContent>
+                  <Typography sx={{ color: "#10b981", mb: 1 }}>
+                    ✓
+                  </Typography>
+                  <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
+                    {benefit.title}
+                  </Typography>
+                  <Typography sx={{ color: "rgba(255, 255, 255, 0.6)" }}>
+                    {benefit.desc}
+                  </Typography>
+                </CardContent>
+              </Card>
+            ))}
+          </Box>
+        </Container>
+      </Box>
+
+      {/* CTA Section */}
+      <Box sx={{ background: "#000000", py: 12 }}>
+        <Container maxWidth="md">
+          <CTASection>
+            <Box sx={{ position: "relative", zIndex: 1, textAlign: "center" }}>
+              <GradientText variant="h3" sx={{ mb: 3 }}>
+                Try Demo Assessment Now →
+              </GradientText>
+              <Typography
+                sx={{
+                  color: "rgba(255, 255, 255, 0.7)",
+                  mb: 6,
+                  fontSize: "1.1rem",
+                }}
+              >
+                🔒 No registration required for demo • Experience AI-powered
+                assessments instantly
+              </Typography>
+              <StyledButton variant="contained" onClick={handleGetStarted}>
+                Start Your Assessment
+              </StyledButton>
+            </Box>
+          </CTASection>
+        </Container>
+      </Box>
+
       {/* Assessment Sign Up Form Dialog */}
       <FormDialog open={openForm} onClose={handleCloseForm} maxWidth="sm" fullWidth>
-        <DialogTitle
-          sx={{
-            fontWeight: "bold",
-            fontSize: "1.75rem",
-            pb: 1,
-            mb:4,
-            color:"#fff",
-            borderBottom: "1px solid rgba(59, 130, 246, 0.2)",
-          }}
-        >
+        <DialogTitle sx={{ fontSize: "1.5rem", fontWeight: 700, pb: 1 }}>
           Start Your Assessment
         </DialogTitle>
-        <DialogContent sx={{ pt: 3 }}>
-          {/* Error Alert */}
-          {showError && (
-            <Box
+        <DialogContent>
+          <Box component="form" onSubmit={handleOpenConfirmDialog} sx={{ mt: 2 }}>
+            {/* Error Alert */}
+            {showError && (
+              <Box
+                sx={{
+                  backgroundColor: "rgba(239, 68, 68, 0.1)",
+                  border: "1px solid rgba(239, 68, 68, 0.3)",
+                  borderRadius: "12px",
+                  p: 2,
+                  mb: 3,
+                  color: "#fca5a5",
+                }}
+              >
+                ⚠️ {errorMessage}
+              </Box>
+            )}
+
+            {/* Name Field */}
+            <TextField
+              fullWidth
+              label="Full Name"
+              name="name"
+              value={formData.name}
+              onChange={handleFormChange}
+              variant="outlined"
               sx={{
                 mb: 3,
-                p: 3,
-                backgroundColor: "rgba(239, 68, 68, 0.1)",
-                border: "2px solid rgba(239, 68, 68, 0.3)",
-                borderRadius: "12px",
-                color: "#fca5a5",
+                "& .MuiOutlinedInput-root": {
+                  color: "white",
+                  "& fieldset": {
+                    borderColor: "rgba(59, 130, 246, 0.3)",
+                  },
+                  "&:hover fieldset": {
+                    borderColor: "rgba(59, 130, 246, 0.5)",
+                  },
+                  "&.Mui-focused fieldset": {
+                    borderColor: "#3b82f6",
+                  },
+                },
+                "& .MuiInputBase-input::placeholder": {
+                  color: "rgba(255, 255, 255, 0.5)",
+                  opacity: 1,
+                },
+                "& .MuiInputLabel-root": {
+                  color: "rgba(255, 255, 255, 0.7)",
+                },
+              }}
+            />
+
+            {/* Email Field */}
+            <TextField
+              fullWidth
+              label="Email Address"
+              name="email"
+              type="email"
+              value={formData.email}
+              onChange={handleFormChange}
+              variant="outlined"
+              sx={{
+                mb: 3,
+                "& .MuiOutlinedInput-root": {
+                  color: "white",
+                  "& fieldset": {
+                    borderColor: "rgba(59, 130, 246, 0.3)",
+                  },
+                  "&:hover fieldset": {
+                    borderColor: "rgba(59, 130, 246, 0.5)",
+                  },
+                  "&.Mui-focused fieldset": {
+                    borderColor: "#3b82f6",
+                  },
+                },
+                "& .MuiInputBase-input::placeholder": {
+                  color: "rgba(255, 255, 255, 0.5)",
+                  opacity: 1,
+                },
+                "& .MuiInputLabel-root": {
+                  color: "rgba(255, 255, 255, 0.7)",
+                },
+              }}
+            />
+
+            {/* Skill Level Dropdown */}
+            <FormControl fullWidth sx={{ mb: 3 }}>
+              <InputLabel
+                sx={{
+                  color: "rgba(255, 255, 255, 0.7)",
+                  "&.Mui-focused": {
+                    color: "#3b82f6",
+                  },
+                }}
+              >
+                Skill Level
+              </InputLabel>
+              <Select
+                name="skillLevel"
+                value={formData.skillLevel}
+                onChange={handleFormChange}
+                label="Skill Level"
+                sx={{
+                  color: "white",
+                  "& .MuiOutlinedInput-notchedOutline": {
+                    borderColor: "rgba(59, 130, 246, 0.3)",
+                  },
+                  "&:hover .MuiOutlinedInput-notchedOutline": {
+                    borderColor: "rgba(59, 130, 246, 0.5)",
+                  },
+                  "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                    borderColor: "#3b82f6",
+                  },
+                  "& .MuiSvgIcon-root": {
+                    color: "rgba(255, 255, 255, 0.7)",
+                  },
+                }}
+              >
+                <MenuItem
+                  value="easy"
+                  sx={{
+                    backgroundColor: "rgba(10, 10, 10, 0.95)",
+                    color: "white",
+                    "&:hover": {
+                      backgroundColor: "rgba(59, 130, 246, 0.2)",
+                    },
+                  }}
+                >
+                  🟢 Easy - Beginner
+                </MenuItem>
+                <MenuItem
+                  value="medium"
+                  sx={{
+                    backgroundColor: "rgba(10, 10, 10, 0.95)",
+                    color: "white",
+                    "&:hover": {
+                      backgroundColor: "rgba(59, 130, 246, 0.2)",
+                    },
+                  }}
+                >
+                  🟡 Medium - Intermediate
+                </MenuItem>
+                <MenuItem
+                  value="hard"
+                  sx={{
+                    backgroundColor: "rgba(10, 10, 10, 0.95)",
+                    color: "white",
+                    "&:hover": {
+                      backgroundColor: "rgba(59, 130, 246, 0.2)",
+                    },
+                  }}
+                >
+                  🔴 Hard - Advanced
+                </MenuItem>
+              </Select>
+            </FormControl>
+
+            {/* Submit Button */}
+            <StyledButton
+              type="submit"
+              variant="contained"
+              fullWidth
+              sx={{ py: 1.5 }}
+            >
+              Continue to Confirmation →
+            </StyledButton>
+
+            <Typography
+              sx={{
+                textAlign: "center",
+                mt: 2,
+                color: "rgba(255, 255, 255, 0.5)",
+                fontSize: "0.9rem",
               }}
             >
-              <Typography sx={{ fontWeight: 600 }}>⚠️ {errorMessage}</Typography>
+              🔒 Your responses are secure and private
+            </Typography>
+          </Box>
+        </DialogContent>
+      </FormDialog>
+
+      {/* Confirmation Dialog */}
+      <FormDialog
+        open={openConfirmDialog}
+        onClose={() => setOpenConfirmDialog(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ fontSize: "1.5rem", fontWeight: 700, pb: 1 }}>
+          Confirm Your Skill Level
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ mt: 2 }}>
+            {/* Instructions */}
+            <Box
+              sx={{
+                backgroundColor: "rgba(59, 130, 246, 0.1)",
+                border: "1px solid rgba(59, 130, 246, 0.3)",
+                borderRadius: "12px",
+                p: 3,
+                mb: 4,
+              }}
+            >
+              <Typography sx={{ color: "rgba(255, 255, 255, 0.8)", mb: 1 }}>
+                You selected:{" "}
+                <span
+                  style={{
+                    fontWeight: 700,
+                    color: "#60a5fa",
+                    textTransform: "capitalize",
+                  }}
+                >
+                  {formData.skillLevel}
+                </span>
+              </Typography>
+              <Typography sx={{ color: "rgba(255, 255, 255, 0.6)", fontSize: "0.95rem" }}>
+                Please type "{formData.skillLevel}" below to confirm and begin your
+                assessment.
+              </Typography>
             </Box>
-          )}
 
-          <form onSubmit={handleFormSubmit}>
-            <Stack spacing={3} sx={{pt:3}}>
-              {/* Name Field */}
-              <TextField
-                fullWidth
-                label="Full Name"
-                name="name"
-                value={formData.name}
-                onChange={handleFormChange}
-                variant="outlined"
-                placeholder="John Doe"
+            {/* Confirmation Error Alert */}
+            {confirmationError && (
+              <Box
                 sx={{
-                  mt:4,
-                  color:"#fff",
-                  "& .MuiOutlinedInput-root": {
-                    color: "white",
-                    backgroundColor: "rgba(0, 0, 0, 0.3)",
-                    borderRadius: "12px",
-                    "& fieldset": {
-                      borderColor: "rgba(59, 130, 246, 0.3)",
-                      borderWidth: "2px",
-                    },
-                    "&:hover fieldset": {
-                      borderColor: "rgba(59, 130, 246, 0.5)",
-                    },
-                    "&.Mui-focused fieldset": {
-                      borderColor: "#3b82f6",
-                    },
+                  backgroundColor: "rgba(239, 68, 68, 0.1)",
+                  border: "1px solid rgba(239, 68, 68, 0.3)",
+                  borderRadius: "12px",
+                  p: 2,
+                  mb: 3,
+                  color: "#fca5a5",
+                }}
+              >
+                {confirmationError}
+              </Box>
+            )}
+
+            {/* Confirmation Input Field */}
+            <TextField
+              fullWidth
+              placeholder={`Type "${formData.skillLevel}" here`}
+              value={confirmationInput}
+              onChange={(e) => setConfirmationInput(e.target.value)}
+              variant="outlined"
+              autoFocus
+              onKeyPress={(e) => {
+                if (e.key === "Enter") {
+                  handleConfirmationSubmit();
+                }
+              }}
+              sx={{
+                mb: 3,
+                "& .MuiOutlinedInput-root": {
+                  color: "white",
+                  "& fieldset": {
+                    borderColor: "rgba(59, 130, 246, 0.3)",
                   },
-                  "& .MuiInputLabel-root": {
-                    color: "rgba(156, 163, 175, 0.8)",
+                  "&:hover fieldset": {
+                    borderColor: "rgba(59, 130, 246, 0.5)",
                   },
-                  "& .MuiInputLabel-root.Mui-focused": {
-                    color: "#60a5fa",
+                  "&.Mui-focused fieldset": {
+                    borderColor: "#3b82f6",
                   },
-                  "& .MuiOutlinedInput-input::placeholder": {
-                    color: "rgba(156, 163, 175, 0.5)",
-                    opacity: 1,
-                  },
-                  "& .MuiInputBase-input:-webkit-autofill": {
-                    WebkitBoxShadow: "0 0 0 1000px rgba(0, 0, 0, 0.3) inset",
-                    WebkitTextFillColor: "white",
+                },
+                "& .MuiInputBase-input::placeholder": {
+                  color: "rgba(255, 255, 255, 0.5)",
+                  opacity: 1,
+                },
+              }}
+            />
+
+            {/* Button Group */}
+            <Box sx={{ display: "flex", gap: 2 }}>
+              <Button
+                fullWidth
+                variant="outlined"
+                onClick={() => setOpenConfirmDialog(false)}
+                sx={{
+                  borderColor: "rgba(255, 255, 255, 0.3)",
+                  color: "rgba(255, 255, 255, 0.7)",
+                  borderRadius: "12px",
+                  "&:hover": {
+                    backgroundColor: "rgba(255, 255, 255, 0.05)",
                   },
                 }}
-              />
-
-              {/* Email Field */}
-              <TextField
-                fullWidth
-                label="Email"
-                name="email"
-                type="email"
-                value={formData.email}
-                onChange={handleFormChange}
-                variant="outlined"
-                placeholder="john@example.com"
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    color: "white",
-                    backgroundColor: "rgba(0, 0, 0, 0.3)",
-                    borderRadius: "12px",
-                    "& fieldset": {
-                      borderColor: "rgba(59, 130, 246, 0.3)",
-                      borderWidth: "2px",
-                    },
-                    "&:hover fieldset": {
-                      borderColor: "rgba(59, 130, 246, 0.5)",
-                    },
-                    "&.Mui-focused fieldset": {
-                      borderColor: "#3b82f6",
-                    },
-                  },
-                  "& .MuiInputLabel-root": {
-                    color: "rgba(156, 163, 175, 0.8)",
-                  },
-                  "& .MuiInputLabel-root.Mui-focused": {
-                    color: "#60a5fa",
-                  },
-                  "& .MuiOutlinedInput-input::placeholder": {
-                    color: "rgba(156, 163, 175, 0.5)",
-                    opacity: 1,
-                  },
-                  "& .MuiInputBase-input:-webkit-autofill": {
-                    WebkitBoxShadow: "0 0 0 1000px rgba(0, 0, 0, 0.3) inset",
-                    WebkitTextFillColor: "white",
-                  },
-                }}
-              />
-
-              {/* Skill Level Dropdown */}
-              <FormControl fullWidth>
-                <InputLabel
-                  sx={{
-                    color: "rgba(156, 163, 175, 0.8)",
-                    "&.Mui-focused": {
-                      color: "#60a5fa",
-                    },
-                  }}
-                >
-                  Skill Level
-                </InputLabel>
-                <Select
-                  name="skillLevel"
-                  value={formData.skillLevel}
-                  onChange={handleFormChange}
-                  label="Skill Level"
-                  sx={{
-                    color: "white",
-                    backgroundColor: "rgba(0, 0, 0, 0.3)",
-                    borderRadius: "12px",
-                    "& .MuiOutlinedInput-notchedOutline": {
-                      borderColor: "rgba(59, 130, 246, 0.3)",
-                      borderWidth: "2px",
-                    },
-                    "&:hover .MuiOutlinedInput-notchedOutline": {
-                      borderColor: "rgba(59, 130, 246, 0.5)",
-                    },
-                    "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                      borderColor: "#3b82f6",
-                    },
-                    "& .MuiSvgIcon-root": {
-                      color: "#60a5fa",
-                    },
-                  }}
-                  MenuProps={{
-                    PaperProps: {
-                      sx: {
-                        backgroundColor: "rgba(10, 10, 10, 0.98)",
-                        border: "1px solid rgba(59, 130, 246, 0.3)",
-                        borderRadius: "12px",
-                        mt: 1,
-                        "& .MuiMenuItem-root": {
-                          color: "white",
-                          "&:hover": {
-                            backgroundColor: "rgba(59, 130, 246, 0.1)",
-                          },
-                          "&.Mui-selected": {
-                            backgroundColor: "rgba(59, 130, 246, 0.2)",
-                            "&:hover": {
-                              backgroundColor: "rgba(59, 130, 246, 0.25)",
-                            },
-                          },
-                        },
-                      },
-                    },
-                  }}
-                >
-                  <MenuItem value="easy">🟢 Easy - Beginner</MenuItem>
-                  <MenuItem value="medium">🟡 Medium - Intermediate</MenuItem>
-                </Select>
-              </FormControl>
-
-              {/* Submit Button */}
+              >
+                Back
+              </Button>
               <StyledButton
-                variant="contained"
-                type="submit"
                 fullWidth
+                variant="contained"
+                onClick={handleConfirmationSubmit}
                 disabled={loading}
-                size="large"
-                sx={{ mt: 2 }}
               >
                 {loading ? (
-                  <>
-                    <CircularProgress size={20} sx={{ mr: 1, color: "white" }} />
-                    Starting Assessment...
-                  </>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    <CircularProgress size={20} sx={{ color: "white" }} />
+                    Starting...
+                  </Box>
                 ) : (
                   "Start Assessment →"
                 )}
               </StyledButton>
+            </Box>
 
-              <Typography
-                variant="caption"
-                sx={{
-                  textAlign: "center",
-                  color: "rgba(156, 163, 175, 0.6)",
-                  fontSize: "0.875rem",
-                }}
-              >
-                🔒 Your responses are secure and private
-              </Typography>
-            </Stack>
-          </form>
+            <Typography
+              sx={{
+                textAlign: "center",
+                mt: 3,
+                color: "rgba(255, 255, 255, 0.5)",
+                fontSize: "0.85rem",
+              }}
+            >
+              🔒 Your responses are secure and private
+            </Typography>
+          </Box>
         </DialogContent>
       </FormDialog>
 
       {/* Footer */}
       <Box
         sx={{
-          backgroundColor: "rgba(0, 0, 0, 0.8)",
-          borderTop: "1px solid rgba(59, 130, 246, 0.15)",
-          py: 6,
+          background: "#000000",
+          borderTop: "1px solid rgba(59, 130, 246, 0.1)",
+          py: 8,
         }}
       >
         <Container maxWidth="lg">
-          <Stack
-            direction={{ xs: "column", sm: "row" }}
-            spacing={4}
-            justifyContent="space-between"
-            alignItems="center"
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: {
+                xs: "1fr",
+                md: "repeat(4, 1fr)",
+              },
+              gap: 4,
+              mb: 6,
+            }}
           >
             <Box>
-              <Typography variant="body2" sx={{ color: "white", mb: 1, opacity: 0.7 }}>
-                © 2024 Knovia AI. All rights reserved.
+              <Typography
+                variant="h6"
+                sx={{ fontWeight: 700, mb: 2, color: "white" }}
+              >
+                Knovia AI
               </Typography>
-              <Typography variant="caption" sx={{ color: "white", opacity: 0.5 }}>
+              <Typography sx={{ color: "rgba(255, 255, 255, 0.6)" }}>
                 Building the future of intelligent assessments
               </Typography>
             </Box>
-            <Stack direction="row" spacing={4}>
-              <Link
-                href="#"
-                sx={{
-                  color: "white",
-                  opacity: 0.7,
-                  textDecoration: "none",
-                  "&:hover": { color: "#60a5fa", opacity: 1 },
-                  transition: "all 0.3s ease",
-                }}
-              >
-                Privacy
-              </Link>
-              <Link
-                href="#"
-                sx={{
-                  color: "white",
-                  opacity: 0.7,
-                  textDecoration: "none",
-                  "&:hover": { color: "#60a5fa", opacity: 1 },
-                  transition: "all 0.3s ease",
-                }}
-              >
-                Terms
-              </Link>
-              <Link
-                href="#"
-                sx={{
-                  color: "white",
-                  opacity: 0.7,
-                  textDecoration: "none",
-                  "&:hover": { color: "#60a5fa", opacity: 1 },
-                  transition: "all 0.3s ease",
-                }}
-              >
-                Contact
-              </Link>
-            </Stack>
-          </Stack>
+            {[
+              { label: "Product", links: ["Features", "Pricing", "Blog"] },
+              { label: "Company", links: ["About", "Careers", "Contact"] },
+              { label: "Legal", links: ["Privacy", "Terms", "Security"] },
+            ].map((col, idx) => (
+              <Box key={idx}>
+                <Typography
+                  sx={{
+                    fontWeight: 700,
+                    mb: 2,
+                    color: "rgba(255, 255, 255, 0.8)",
+                  }}
+                >
+                  {col.label}
+                </Typography>
+                {col.links.map((link, i) => (
+                  <Link
+                    key={i}
+                    href="#"
+                    sx={{
+                      display: "block",
+                      color: "rgba(255, 255, 255, 0.6)",
+                      textDecoration: "none",
+                      mb: 1,
+                      "&:hover": { color: "#60a5fa" },
+                    }}
+                  >
+                    {link}
+                  </Link>
+                ))}
+              </Box>
+            ))}
+          </Box>
+
+          <Box
+            sx={{
+              borderTop: "1px solid rgba(59, 130, 246, 0.1)",
+              pt: 4,
+              textAlign: "center",
+              color: "rgba(255, 255, 255, 0.5)",
+            }}
+          >
+            <Typography>
+              © 2024 Knovia AI. All rights reserved.
+            </Typography>
+          </Box>
         </Container>
       </Box>
     </>

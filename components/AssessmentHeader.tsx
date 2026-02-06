@@ -70,7 +70,7 @@ export default function AssessmentHeader() {
             </svg>
 
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold uppercase tracking-wider">
+              <span className="text-xs font-bold uppercase text-white tracking-wider">
                 Time:
               </span>
 
@@ -82,21 +82,12 @@ export default function AssessmentHeader() {
                     : "text-blue-100"
                   }`}
               >
-                {formatTime(Math.max(0, remaining))}
+                {formatTime(Math.max(0, (remaining)))}
               </span>
             </div>
           </div>
 
-          {/* Live badge */}
-          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 rounded-md border border-emerald-500/30">
-            <div className="relative">
-              <div className="w-2 h-2 bg-emerald-400 rounded-full" />
-              <div className="absolute inset-0 w-2 h-2 bg-emerald-400 rounded-full animate-ping" />
-            </div>
-            <span className="text-xs font-semibold text-emerald-300 uppercase">
-              Live
-            </span>
-          </div>
+          
         </div>
       </div>
     </header>

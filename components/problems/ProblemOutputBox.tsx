@@ -11,7 +11,7 @@ export default function ProblemOutputBox() {
   const { results, isCodeRunning, isCodeSubmitting } = useAnswers();
 
   const getStatusInfo = (statusId: number, hasError: boolean) => {
-    if (Number(statusId) === 3) {
+    if (Number(statusId) == 3) {
       return {
         passed: !hasError,
         icon: hasError ? (
@@ -127,7 +127,7 @@ export default function ProblemOutputBox() {
 
         gap: 0,
         backgroundColor: "#fafafa",
-        
+
       }}
     >
       {results.map((result: ExecutionResult, index: number) => {
@@ -150,7 +150,7 @@ export default function ProblemOutputBox() {
               "&:hover": {
                 backgroundColor: "#f3f4f6",
               },
-           
+
             }}
           >
             {/* Test Case Header */}
@@ -243,7 +243,7 @@ export default function ProblemOutputBox() {
                   <Box sx={{ textAlign: "right" }}>
                     <Box className="text-gray-500 font-medium">MEMORY</Box>
                     <Box className="text-gray-800 font-semibold">
-                      {result.memory}MB
+                      {result.memory}kb
                     </Box>
                   </Box>
                 </Box>
@@ -273,29 +273,55 @@ export default function ProblemOutputBox() {
                 {result.stdout || result.compile_error || result.stderr ? (
                   <Box sx={{ mt: 1.5 }}>
                     {result.stdout && (
-                      <Box sx={{ mb: 1.5 }}>
-                        <Box className="text-xs text-gray-600 font-semibold mb-1 uppercase tracking-wide">
-                          Output
+                      <>
+                        <Box sx={{ mb: 1.5 }}>
+                          <Box className="text-xs text-gray-600 font-semibold mb-1 uppercase tracking-wide">
+                            Input
+                          </Box>
+                          <Box
+                            sx={{
+                              backgroundColor: "#1a1a1a",
+                              borderRadius: "4px",
+                              p: "10px 12px",
+                              fontFamily: '"Courier New", monospace',
+                              fontSize: "0.75rem",
+                              color: "#d4d4d4",
+                              overflow: "auto",
+                              whiteSpace: "pre-wrap",
+                              wordBreak: "break-word",
+                              maxHeight: "120px",
+                              border: "1px solid #333",
+                              lineHeight: "1.4",
+                            }}
+                          >
+                            {result?.stdin ?? ""}
+                          </Box>
                         </Box>
-                        <Box
-                          sx={{
-                            backgroundColor: "#1a1a1a",
-                            borderRadius: "4px",
-                            p: "10px 12px",
-                            fontFamily: '"Courier New", monospace',
-                            fontSize: "0.75rem",
-                            color: "#d4d4d4",
-                            overflow: "auto",
-                            whiteSpace: "pre-wrap",
-                            wordBreak: "break-word",
-                            maxHeight: "120px",
-                            border: "1px solid #333",
-                            lineHeight: "1.4",
-                          }}
-                        >
-                          {result.stdout}
+                        <Box sx={{ mb: 1.5 }}>
+                          <Box className="text-xs text-gray-600 font-semibold mb-1 uppercase tracking-wide">
+                            Output
+                          </Box>
+                          <Box
+                            sx={{
+                              backgroundColor: "#1a1a1a",
+                              borderRadius: "4px",
+                              p: "10px 12px",
+                              fontFamily: '"Courier New", monospace',
+                              fontSize: "0.75rem",
+                              color: "#d4d4d4",
+                              overflow: "auto",
+                              whiteSpace: "pre-wrap",
+                              wordBreak: "break-word",
+                              maxHeight: "120px",
+                              border: "1px solid #333",
+                              lineHeight: "1.4",
+                            }}
+                          >
+                            {result.stdout}
+                          </Box>
                         </Box>
-                      </Box>
+                      </>
+
                     )}
 
                     {result.compile_error && (

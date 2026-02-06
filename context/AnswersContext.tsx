@@ -165,7 +165,7 @@ export const AnswersProvider = ({ children }: { children: ReactNode }) => {
           language: lang,
           problemId,
         });
-        const results = await fetchResultsInBatches(res);
+        const results = await fetchResultsInBatches(res , problemId);
 
         setCurrentSectionAnswers((prev) => {
           return {
@@ -217,7 +217,7 @@ export const AnswersProvider = ({ children }: { children: ReactNode }) => {
           sectionId,
           solutionId,
         });
-        const results = await fetchResultsInBatches(res);
+        const results = await fetchResultsInBatches(res ,problemId);
 
         setCurrentSectionAnswers((prev) => {
           return {

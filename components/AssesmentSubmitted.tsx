@@ -122,12 +122,6 @@ export default function AssesmentSubmitted({ solutionId }: AssesmentSubmittedPro
             </div>
           </div>
 
-          {/* Footer CTA */}
-          <div className="bg-gray-50 -mx-8 -mb-8 px-8 py-6 flex gap-3">
-            <button className="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors">
-              Go to Dashboard
-            </button>
-          </div>
         </div>
       </div>
     </div>

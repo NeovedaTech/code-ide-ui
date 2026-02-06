@@ -15,7 +15,7 @@ const getAuthHeaders = () => ({
   "X-Auth-Token": process.env.REACT_APP_AUTH_TOKEN || "",
 });
 
-export const fetchResultsInBatches = async (tokens: TokenList) => {
+export const fetchResultsInBatches = async (tokens: TokenList, problemId: string) => {
   const maxAttempts = 30;
   const delay = 1000;
   const tokenStrings = tokens.map((t) => (typeof t === "string" ? t : t.token));
@@ -30,7 +30,7 @@ export const fetchResultsInBatches = async (tokens: TokenList) => {
     try {
       const res = await post<SubmissionsResponse>(
         `${EXECUTION_ROUTES.GET_OUTPUT}`,
-        { tokenStrings: Array.from(pendingTokens) },
+        { tokenStrings: Array.from(pendingTokens), problemId: problemId },
         {
           headers: getAuthHeaders(),
         },
@@ -43,6 +43,7 @@ export const fetchResultsInBatches = async (tokens: TokenList) => {
         if ([3, 4, 5, 6, 11].includes(r.status?.id)) {
           // Status is complete
           results.set(token, {
+            stdin: r.stdin ? decodeBase64(r.stdin).trim() : "",
             stdout: r.stdout ? decodeBase64(r.stdout).trim() : "",
             stderr: r.stderr ? decodeBase64(r.stderr).trim() : "",
             compile_error: r.compile_output

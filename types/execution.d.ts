@@ -11,6 +11,7 @@ export type SubmissionStatus = {
 
 export type Submission = {
   stdout: string | null;
+  stdin: string | null;
   time: string | null;
   memory: number | null;
   stderr: string | null;
@@ -35,6 +36,7 @@ export type ExecutionStatus = {
 export type ExecutionResult = {
   stdout: string;
   stderr: string;
+  stdin:string;
   compile_error: string;
   time: string;    // looks like seconds as a string
   memory: number;  // in KB

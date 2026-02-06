@@ -77,6 +77,7 @@ export const useCodeExecutor = ({
         const tokens = data.tokens;
         const outputs = await fetchResultsInBatches(
           tokens,
+          problemId
         );
 
         outputs.forEach((output: any, index: number) => {
