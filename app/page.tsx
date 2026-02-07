@@ -10,12 +10,14 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
+  DialogActions,
   FormControl,
   InputLabel,
   Select,
   MenuItem,
   Button,
   CircularProgress,
+  Alert,
 } from "@mui/material";
 import { styled } from "@mui/material/styles";
 import { NEXT_PUBLIC_API_URL } from "@/constants/config";
@@ -101,7 +103,7 @@ export default function Page() {
   const [confirmationInput, setConfirmationInput] = useState("");
   const [confirmationError, setConfirmationError] = useState("");
 
-  const handleFormChange = (e: any) => {
+  const handleFormChange = (e:any) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
@@ -109,7 +111,7 @@ export default function Page() {
     }));
   };
 
-  const handleOpenConfirmDialog = async (e: React.FormEvent) => {
+  const handleOpenConfirmDialog = async (e:any) => {
     e.preventDefault();
 
     if (!formData.name.trim()) {
@@ -117,12 +119,14 @@ export default function Page() {
       setShowError(true);
       return;
     }
+
     if (!formData.email.trim()) {
       setErrorMessage("Please enter your email address");
       setShowError(true);
       return;
     }
 
+    // Reset confirmation state
     setConfirmationInput("");
     setConfirmationError("");
     setOpenConfirmDialog(true);
@@ -159,25 +163,17 @@ export default function Page() {
 
       const data = await response.json();
 
-      if (!data.success) {
+      if (!response.ok || !data.success) {
         setErrorMessage(data.error || "Failed to register. Please try again.");
         setShowError(true);
-        setLoading(false);
         setOpenConfirmDialog(false);
-        return;
-      }
-
-      if (!response.ok) {
-        setErrorMessage(data.error || "Failed to register. Please try again.");
-        setShowError(true);
         setLoading(false);
-        setOpenConfirmDialog(false);
         return;
       }
 
       const { userId } = data;
-
       let selectedAssessmentId = ASSESSMENT_ID_EASY;
+
       if (
         formData.skillLevel === "medium" ||
         formData.skillLevel === "hard"
@@ -188,6 +184,7 @@ export default function Page() {
       const assessmentUrl = `/user?assessmentId=${selectedAssessmentId}&userId=${userId}`;
       window.location.href = assessmentUrl;
 
+      // Reset form
       setFormData({
         name: "",
         email: "",
@@ -202,7 +199,6 @@ export default function Page() {
           : "An unexpected error occurred. Please try again."
       );
       setShowError(true);
-    } finally {
       setLoading(false);
     }
   };
@@ -210,34 +206,23 @@ export default function Page() {
   return (
     <>
       {/* Navigation */}
-      <StyledAppBar>
-        <Toolbar sx={{ justifyContent: "space-between" }}>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-            <Image
-              src="/logo.png"
-              alt="Knovia AI"
-              width={32}
-              height={32}
-              priority
-            />
-            <Typography
-              variant="h6"
-              sx={{ fontWeight: 700, fontSize: "1.25rem" }}
-            >
-              Knovia AI
-            </Typography>
-          </Box>
+      <StyledAppBar position="fixed">
+        <Toolbar>
+          <Typography variant="h6" sx={{ fontWeight: 700, fontSize: "1.5rem" }}>
+            Knovia AI
+          </Typography>
         </Toolbar>
       </StyledAppBar>
 
       {/* Main Content - Hero with Form */}
       <HeroBackground>
-        <Container maxWidth="lg">
+        <Container maxWidth="xl">
           <Box
             sx={{
               display: "grid",
               gridTemplateColumns: { xs: "1fr", lg: "1fr 1fr" },
               gap: 6,
+              px:4,
               alignItems: "center",
             }}
           >
@@ -246,10 +231,10 @@ export default function Page() {
               <Typography
                 variant="h2"
                 sx={{
-                  fontWeight: 700,
-                  mb: 3,
+                  fontWeight: 800,
                   fontSize: { xs: "2.5rem", md: "3.5rem" },
-                  background: "linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #ec4899 100%)",
+                  mb: 3,
+                  background: "linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)",
                   backgroundClip: "text",
                   WebkitBackgroundClip: "text",
                   WebkitTextFillColor: "transparent",
@@ -257,58 +242,64 @@ export default function Page() {
               >
                 Test Your Assessment
               </Typography>
+
               <Typography
+                variant="h5"
                 sx={{
+                  fontSize: "1.25rem",
+                  mb: 4,
                   color: "rgba(255, 255, 255, 0.8)",
-                  mb: 3,
-                  fontSize: "1.2rem",
-                  lineHeight: 1.7,
                 }}
               >
-                Take our AI-powered assessment and discover your strengths and areas for improvement
+                Take our AI-powered assessment and discover your strengths and
+                areas for improvement
               </Typography>
+
               <Typography
                 sx={{
-                  color: "rgba(255, 255, 255, 0.6)",
-                  mb: 6,
                   fontSize: "1rem",
+                  mb: 6,
+                  color: "rgba(255, 255, 255, 0.6)",
                   lineHeight: 1.8,
                 }}
               >
-                Get instant, personalized feedback powered by cutting-edge artificial intelligence. Our adaptive assessment adjusts to your skill level in real-time to provide the most accurate evaluation of your abilities.
+                Get instant, personalized feedback powered by cutting-edge
+                artificial intelligence. Our adaptive assessment adjusts to your
+                skill level in real-time to provide the most accurate evaluation
+                of your abilities.
               </Typography>
 
               {/* Benefits */}
-              <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-                <Box sx={{ display: "flex", gap: 2, alignItems: "flex-start" }}>
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                <Box sx={{ display: "flex", gap: 2 }}>
                   <Typography sx={{ fontSize: "1.5rem" }}>⚡</Typography>
                   <Box>
-                    <Typography sx={{ fontWeight: 600, color: "white", mb: 0.5 }}>
+                    <Typography sx={{ fontWeight: 600 }}>
                       Instant Results
                     </Typography>
-                    <Typography sx={{ color: "rgba(255, 255, 255, 0.6)", fontSize: "0.9rem" }}>
+                    <Typography sx={{ color: "rgba(255, 255, 255, 0.6)" }}>
                       Get real-time feedback immediately
                     </Typography>
                   </Box>
                 </Box>
-                <Box sx={{ display: "flex", gap: 2, alignItems: "flex-start" }}>
+
+                <Box sx={{ display: "flex", gap: 2 }}>
                   <Typography sx={{ fontSize: "1.5rem" }}>🎯</Typography>
                   <Box>
-                    <Typography sx={{ fontWeight: 600, color: "white", mb: 0.5 }}>
+                    <Typography sx={{ fontWeight: 600 }}>
                       Personalized
                     </Typography>
-                    <Typography sx={{ color: "rgba(255, 255, 255, 0.6)", fontSize: "0.9rem" }}>
+                    <Typography sx={{ color: "rgba(255, 255, 255, 0.6)" }}>
                       Adapts to your skill level
                     </Typography>
                   </Box>
                 </Box>
-                <Box sx={{ display: "flex", gap: 2, alignItems: "flex-start" }}>
+
+                <Box sx={{ display: "flex", gap: 2 }}>
                   <Typography sx={{ fontSize: "1.5rem" }}>🔒</Typography>
                   <Box>
-                    <Typography sx={{ fontWeight: 600, color: "white", mb: 0.5 }}>
-                      Secure
-                    </Typography>
-                    <Typography sx={{ color: "rgba(255, 255, 255, 0.6)", fontSize: "0.9rem" }}>
+                    <Typography sx={{ fontWeight: 600 }}>Secure</Typography>
+                    <Typography sx={{ color: "rgba(255, 255, 255, 0.6)" }}>
                       Enterprise-grade protection
                     </Typography>
                   </Box>
@@ -317,342 +308,281 @@ export default function Page() {
             </Box>
 
             {/* Right - Form */}
-            <FormCard  onSubmit={handleOpenConfirmDialog}>
-              <Typography sx={{ fontSize: "1.5rem", fontWeight: 700, mb: 4, color: "white" }}>
-                Start Your Assessment
-              </Typography>
+            <Box>
+              <form
+                onSubmit={handleOpenConfirmDialog}
+                style={{ display: "flex", flexDirection: "column", gap: "30px" }}
+              >
+                <Typography variant="h5" sx={{ fontWeight: 700, mb: 2 }}>
+                  Start Your Assessment
+                </Typography>
 
-              {/* Error Alert */}
-              {showError && (
-                <Box
-                  sx={{
-                    backgroundColor: "rgba(239, 68, 68, 0.1)",
-                    border: "1px solid rgba(239, 68, 68, 0.3)",
-                    borderRadius: "12px",
-                    p: 2,
-                    mb: 3,
-                    color: "#fca5a5",
-                  }}
-                >
-                  ⚠️ {errorMessage}
-                </Box>
-              )}
+                {/* Error Alert */}
+                {showError && (
+                  <Alert severity="error" sx={{ mb: 2 }}>
+                    ⚠️ {errorMessage}
+                  </Alert>
+                )}
 
-              {/* Name Field */}
-              <TextField
-                fullWidth
-                label="Full Name"
-                name="name"
-                value={formData.name}
-                onChange={handleFormChange}
-                variant="outlined"
-                sx={{
-                  mb: 3,
-                  "& .MuiOutlinedInput-root": {
-                    color: "white",
-                    "& fieldset": {
-                      borderColor: "rgba(59, 130, 246, 0.3)",
-                    },
-                    "&:hover fieldset": {
-                      borderColor: "rgba(59, 130, 246, 0.5)",
-                    },
-                    "&.Mui-focused fieldset": {
-                      borderColor: "#3b82f6",
-                    },
-                  },
-                  "& .MuiInputBase-input::placeholder": {
-                    color: "rgba(255, 255, 255, 0.5)",
-                    opacity: 1,
-                  },
-                  "& .MuiInputLabel-root": {
-                    color: "rgba(255, 255, 255, 0.7)",
-                  },
-                }}
-              />
-
-              {/* Email Field */}
-              <TextField
-                fullWidth
-                label="Email Address"
-                name="email"
-                type="email"
-                value={formData.email}
-                onChange={handleFormChange}
-                variant="outlined"
-                sx={{
-                  mb: 3,
-                  "& .MuiOutlinedInput-root": {
-                    color: "white",
-                    "& fieldset": {
-                      borderColor: "rgba(59, 130, 246, 0.3)",
-                    },
-                    "&:hover fieldset": {
-                      borderColor: "rgba(59, 130, 246, 0.5)",
-                    },
-                    "&.Mui-focused fieldset": {
-                      borderColor: "#3b82f6",
-                    },
-                  },
-                  "& .MuiInputBase-input::placeholder": {
-                    color: "rgba(255, 255, 255, 0.5)",
-                    opacity: 1,
-                  },
-                  "& .MuiInputLabel-root": {
-                    color: "rgba(255, 255, 255, 0.7)",
-                  },
-                }}
-              />
-
-              {/* Skill Level Dropdown */}
-              <FormControl fullWidth sx={{ mb: 3 }}>
-                <InputLabel
-                  sx={{
-                    color: "rgba(255, 255, 255, 0.7)",
-                    "&.Mui-focused": {
-                      color: "#3b82f6",
-                    },
-                  }}
-                >
-                  Skill Level
-                </InputLabel>
-                <Select
-                  name="skillLevel"
-                  value={formData.skillLevel}
+                {/* Name Field */}
+                <TextField
+                  label="Full Name"
+                  name="name"
+                  value={formData.name}
                   onChange={handleFormChange}
-                  label="Skill Level"
+                  fullWidth
+                  variant="outlined"
                   sx={{
-                    color: "white",
-                    "& .MuiOutlinedInput-notchedOutline": {
-                      borderColor: "rgba(59, 130, 246, 0.3)",
+                    "& .MuiOutlinedInput-root": {
+                      color: "white",
+                      "& fieldset": {
+                        borderColor: "rgba(59, 130, 246, 0.3)",
+                      },
+                      "&:hover fieldset": {
+                        borderColor: "rgba(59, 130, 246, 0.5)",
+                      },
+                      "&.Mui-focused fieldset": {
+                        borderColor: "#3b82f6",
+                      },
                     },
-                    "&:hover .MuiOutlinedInput-notchedOutline": {
-                      borderColor: "rgba(59, 130, 246, 0.5)",
+                    "& .MuiInputBase-input::placeholder": {
+                      color: "rgba(255, 255, 255, 0.5)",
+                      opacity: 1,
                     },
-                    "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                      borderColor: "#3b82f6",
-                    },
-                    "& .MuiSvgIcon-root": {
+                    "& .MuiInputLabel-root": {
                       color: "rgba(255, 255, 255, 0.7)",
                     },
                   }}
+                  placeholder="John Doe"
+                />
+
+                {/* Email Field */}
+                <TextField
+                  label="Email Address"
+                  name="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={handleFormChange}
+                  fullWidth
+                  variant="outlined"
+                  sx={{
+                    "& .MuiOutlinedInput-root": {
+                      color: "white",
+                      "& fieldset": {
+                        borderColor: "rgba(59, 130, 246, 0.3)",
+                      },
+                      "&:hover fieldset": {
+                        borderColor: "rgba(59, 130, 246, 0.5)",
+                      },
+                      "&.Mui-focused fieldset": {
+                        borderColor: "#3b82f6",
+                      },
+                    },
+                    "& .MuiInputBase-input::placeholder": {
+                      color: "rgba(255, 255, 255, 0.5)",
+                      opacity: 1,
+                    },
+                    "& .MuiInputLabel-root": {
+                      color: "rgba(255, 255, 255, 0.7)",
+                    },
+                  }}
+                  placeholder="you@example.com"
+                />
+
+                {/* Skill Level Dropdown */}
+                <FormControl fullWidth>
+                  <InputLabel
+                    sx={{
+                      color: "rgba(255, 255, 255, 0.7)",
+                      "&.Mui-focused": {
+                        color: "#3b82f6",
+                      },
+                    }}
+                  >
+                    Skill Level
+                  </InputLabel>
+                  <Select
+                    name="skillLevel"
+                    value={formData.skillLevel}
+                    onChange={handleFormChange}
+                    label="Skill Level"
+                    sx={{
+                      color: "white",
+                      "& .MuiOutlinedInput-notchedOutline": {
+                        borderColor: "rgba(59, 130, 246, 0.3)",
+                      },
+                      "&:hover .MuiOutlinedInput-notchedOutline": {
+                        borderColor: "rgba(59, 130, 246, 0.5)",
+                      },
+                      "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                        borderColor: "#3b82f6",
+                      },
+                      "& .MuiSvgIcon-root": {
+                        color: "rgba(255, 255, 255, 0.7)",
+                      },
+                    }}
+                  >
+                    <MenuItem value="easy">🟢 Easy - Beginner</MenuItem>
+                    <MenuItem value="medium">🟡 Medium - Intermediate</MenuItem>
+                    <MenuItem value="hard">🔴 Hard - Advanced</MenuItem>
+                  </Select>
+                </FormControl>
+
+                {/* Submit Button */}
+                <StyledButton
+                  variant="contained"
+                  type="submit"
+                  fullWidth
+                  sx={{ mt: 2 }}
                 >
-                  <MenuItem
-                    value="easy"
-                    sx={{
-                      backgroundColor: "rgba(10, 10, 10, 0.95)",
-                      color: "white",
-                      "&:hover": {
-                        backgroundColor: "rgba(59, 130, 246, 0.2)",
-                      },
-                    }}
-                  >
-                    🟢 Easy - Beginner
-                  </MenuItem>
-                  <MenuItem
-                    value="medium"
-                    sx={{
-                      backgroundColor: "rgba(10, 10, 10, 0.95)",
-                      color: "white",
-                      "&:hover": {
-                        backgroundColor: "rgba(59, 130, 246, 0.2)",
-                      },
-                    }}
-                  >
-                    🟡 Medium - Intermediate
-                  </MenuItem>
-                  <MenuItem
-                    value="hard"
-                    sx={{
-                      backgroundColor: "rgba(10, 10, 10, 0.95)",
-                      color: "white",
-                      "&:hover": {
-                        backgroundColor: "rgba(59, 130, 246, 0.2)",
-                      },
-                    }}
-                  >
-                    🔴 Hard - Advanced
-                  </MenuItem>
-                </Select>
-              </FormControl>
+                  Continue to Confirmation →
+                </StyledButton>
 
-              {/* Submit Button */}
-              <StyledButton
-                type="submit"
-                variant="contained"
-                fullWidth
-                sx={{ py: 1.5, mb: 2 }}
-              >
-                Continue to Confirmation →
-              </StyledButton>
-
-              <Typography
-                sx={{
-                  textAlign: "center",
-                  color: "rgba(255, 255, 255, 0.5)",
-                  fontSize: "0.85rem",
-                }}
-              >
-                🔒 Your responses are secure and private
-              </Typography>
-            </FormCard>
+                {/* Privacy Note */}
+                <Typography
+                  sx={{
+                    fontSize: "0.875rem",
+                    color: "rgba(255, 255, 255, 0.5)",
+                    textAlign: "center",
+                    mt: 2,
+                  }}
+                >
+                  🔒 Your responses are secure and private
+                </Typography>
+              </form>
+            </Box>
           </Box>
         </Container>
       </HeroBackground>
 
-      {/* Confirmation Dialog with Text */}
+      {/* Confirmation Dialog */}
       <FormDialog
         open={openConfirmDialog}
         onClose={() => setOpenConfirmDialog(false)}
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle sx={{ fontSize: "1.5rem", fontWeight: 700, pb: 1 }}>
+        <DialogTitle sx={{ fontWeight: 700, fontSize: "1.25rem" }}>
           Confirm Your Skill Level
         </DialogTitle>
-        <DialogContent>
-          <Box sx={{ mt: 2 }}>
-            {/* Information Text */}
-            <Box
-              sx={{
-                backgroundColor: "rgba(59, 130, 246, 0.05)",
-                border: "1px solid rgba(59, 130, 246, 0.3)",
-                borderRadius: "12px",
-                p: 3,
-                mb: 4,
-              }}
-            >
-              <Typography sx={{ color: "rgba(255, 255, 255, 0.8)", mb: 2 }}>
-                You're about to start an assessment tailored to your skill level:
-              </Typography>
-              <Typography
-                sx={{
-                  fontWeight: 700,
-                  color: "#60a5fa",
-                  textTransform: "capitalize",
-                  mb: 2,
-                  fontSize: "1.1rem",
-                }}
-              >
-                {formData.skillLevel}
-              </Typography>
-              <Typography sx={{ color: "rgba(255, 255, 255, 0.7)", fontSize: "0.95rem", mb: 2 }}>
-                This assessment will:
-              </Typography>
-              <Box component="ul" sx={{ color: "rgba(255, 255, 255, 0.6)", pl: 2, mb: 2 }}>
-                <Typography component="li" sx={{ mb: 1 }}>
-                  Adapt questions to match your ability level
-                </Typography>
-                <Typography component="li" sx={{ mb: 1 }}>
-                  Take approximately 15-30 minutes to complete
-                </Typography>
-                <Typography component="li" sx={{ mb: 1 }}>
-                  Provide personalized insights on your performance
-                </Typography>
-                <Typography component="li">
-                  Save your results for future reference
-                </Typography>
-              </Box>
-              <Typography sx={{ color: "rgba(255, 255, 255, 0.6)", fontSize: "0.9rem" }}>
-                Please type "{formData.skillLevel}" below to confirm and begin.
-              </Typography>
-            </Box>
 
-            {/* Confirmation Error Alert */}
-            {confirmationError && (
-              <Box
-                sx={{
-                  backgroundColor: "rgba(239, 68, 68, 0.1)",
-                  border: "1px solid rgba(239, 68, 68, 0.3)",
-                  borderRadius: "12px",
-                  p: 2,
-                  mb: 3,
-                  color: "#fca5a5",
-                }}
-              >
-                {confirmationError}
-              </Box>
-            )}
+        <DialogContent sx={{ pt: 2 }}>
+          {/* Information Text */}
+          <Typography sx={{ mb: 3 }}>
+            You're about to start an assessment tailored to your skill level:{" "}
+            <strong>{formData.skillLevel}</strong>
+          </Typography>
 
-            {/* Confirmation Input Field */}
-            <TextField
-              fullWidth
-              placeholder={`Type "${formData.skillLevel}" here`}
-              value={confirmationInput}
-              onChange={(e) => setConfirmationInput(e.target.value)}
-              variant="outlined"
-              autoFocus
-              onKeyPress={(e) => {
-                if (e.key === "Enter") {
-                  handleConfirmationSubmit();
-                }
-              }}
-              sx={{
-                mb: 3,
-                "& .MuiOutlinedInput-root": {
-                  color: "white",
-                  "& fieldset": {
-                    borderColor: "rgba(59, 130, 246, 0.3)",
-                  },
-                  "&:hover fieldset": {
-                    borderColor: "rgba(59, 130, 246, 0.5)",
-                  },
-                  "&.Mui-focused fieldset": {
-                    borderColor: "#3b82f6",
-                  },
-                },
-                "& .MuiInputBase-input::placeholder": {
-                  color: "rgba(255, 255, 255, 0.5)",
-                  opacity: 1,
-                },
-              }}
-            />
+          <Typography sx={{ mb: 3, color: "rgba(255, 255, 255, 0.8)" }}>
+            This assessment will:
+          </Typography>
 
-            {/* Button Group */}
-            <Box sx={{ display: "flex", gap: 2 }}>
-              <Button
-                fullWidth
-                variant="outlined"
-                onClick={() => setOpenConfirmDialog(false)}
-                sx={{
-                  borderColor: "rgba(255, 255, 255, 0.3)",
-                  color: "rgba(255, 255, 255, 0.7)",
-                  borderRadius: "12px",
-                  "&:hover": {
-                    backgroundColor: "rgba(255, 255, 255, 0.05)",
-                  },
-                }}
-              >
-                Back
-              </Button>
-              <StyledButton
-                fullWidth
-                variant="contained"
-                onClick={handleConfirmationSubmit}
-                disabled={loading}
-              >
-                {loading ? (
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                    <CircularProgress size={20} sx={{ color: "white" }} />
-                    Starting...
-                  </Box>
-                ) : (
-                  "Start Assessment →"
-                )}
-              </StyledButton>
-            </Box>
-
-            <Typography
-              sx={{
-                textAlign: "center",
-                mt: 3,
-                color: "rgba(255, 255, 255, 0.5)",
-                fontSize: "0.85rem",
-              }}
-            >
-              🔒 Your responses are secure and private
+          <Box sx={{ mb: 3, pl: 2 }}>
+            <Typography sx={{ mb: 1 }}>
+              • Adapt questions to match your ability level
+            </Typography>
+            <Typography sx={{ mb: 1 }}>
+              • Take approximately 15-30 minutes to complete
+            </Typography>
+            <Typography sx={{ mb: 1 }}>
+              • Provide personalized insights on your performance
+            </Typography>
+            <Typography>
+              • Save your results for future reference
             </Typography>
           </Box>
+
+          <Typography sx={{ mb: 3, fontWeight: 600 }}>
+            Please type "{formData.skillLevel}" below to confirm and begin.
+          </Typography>
+
+          {/* Confirmation Error Alert */}
+          {confirmationError && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {confirmationError}
+            </Alert>
+          )}
+
+          {/* Confirmation Input Field */}
+          <TextField
+            fullWidth
+            placeholder={`Type "${formData.skillLevel}" to confirm`}
+            value={confirmationInput}
+            onChange={(e) => setConfirmationInput(e.target.value)}
+            variant="outlined"
+            autoFocus
+            onKeyPress={(e) => {
+              if (e.key === "Enter") {
+                handleConfirmationSubmit();
+              }
+            }}
+            sx={{
+              mb: 3,
+              "& .MuiOutlinedInput-root": {
+                color: "white",
+                "& fieldset": {
+                  borderColor: "rgba(59, 130, 246, 0.3)",
+                },
+                "&:hover fieldset": {
+                  borderColor: "rgba(59, 130, 246, 0.5)",
+                },
+                "&.Mui-focused fieldset": {
+                  borderColor: "#3b82f6",
+                },
+              },
+              "& .MuiInputBase-input::placeholder": {
+                color: "rgba(255, 255, 255, 0.5)",
+                opacity: 1,
+              },
+            }}
+          />
+
+          <Typography
+            sx={{
+              fontSize: "0.875rem",
+              color: "rgba(255, 255, 255, 0.5)",
+              textAlign: "center",
+            }}
+          >
+            🔒 Your responses are secure and private
+          </Typography>
         </DialogContent>
+
+        {/* Button Group */}
+        <DialogActions sx={{ p: 2 }}>
+          <Button
+            onClick={() => setOpenConfirmDialog(false)}
+            disabled={loading}
+            sx={{
+              borderColor: "rgba(255, 255, 255, 0.3)",
+              color: "rgba(255, 255, 255, 0.7)",
+              borderRadius: "12px",
+              "&:hover": {
+                backgroundColor: "rgba(255, 255, 255, 0.05)",
+              },
+            }}
+            variant="outlined"
+          >
+            Back
+          </Button>
+          <StyledButton
+            onClick={handleConfirmationSubmit}
+            variant="contained"
+            disabled={loading}
+          >
+            {loading ? (
+              <>
+                <CircularProgress
+                  size={20}
+                  sx={{ mr: 1, color: "white" }}
+                />
+                Starting...
+              </>
+            ) : (
+              "Start Assessment →"
+            )}
+          </StyledButton>
+        </DialogActions>
       </FormDialog>
     </>
   );
