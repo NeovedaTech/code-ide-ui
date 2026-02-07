@@ -424,7 +424,6 @@ export default function Page() {
                   >
                     <MenuItem value="easy">🟢 Easy - Beginner</MenuItem>
                     <MenuItem value="medium">🟡 Medium - Intermediate</MenuItem>
-                    <MenuItem value="hard">🔴 Hard - Advanced</MenuItem>
                   </Select>
                 </FormControl>
 
@@ -480,9 +479,6 @@ export default function Page() {
           <Box sx={{ mb: 3, pl: 2 }}>
             <Typography sx={{ mb: 1 }}>
               • Adapt questions to match your ability level
-            </Typography>
-            <Typography sx={{ mb: 1 }}>
-              • Take approximately 15-30 minutes to complete
             </Typography>
             <Typography sx={{ mb: 1 }}>
               • Provide personalized insights on your performance
