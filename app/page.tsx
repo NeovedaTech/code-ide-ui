@@ -422,8 +422,8 @@ export default function Page() {
                       },
                     }}
                   >
-                    <MenuItem value="easy">🟢 Easy - Beginner</MenuItem>
-                    <MenuItem value="medium">🟡 Medium - Intermediate</MenuItem>
+                    <MenuItem value="easy">Automata Fix</MenuItem>
+                    <MenuItem value="medium">Automata</MenuItem>
                   </Select>
                 </FormControl>
 
