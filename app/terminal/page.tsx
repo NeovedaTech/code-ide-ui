@@ -1,56 +1,63 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { Terminal as XTerm } from "xterm";
-import { FitAddon } from "xterm-addon-fit";
-import "xterm/css/xterm.css";
 
 export default function Page() {
   const terminalRef = useRef<HTMLDivElement | null>(null);
   const socketRef = useRef<WebSocket | null>(null);
-  const termRef = useRef<XTerm | null>(null);
-
+  const termRef = useRef<any>(null);
   const [connected, setConnected] = useState(false);
 
   useEffect(() => {
-    const term = new XTerm({
-      cursorBlink: true,
-      fontSize: 14,
-      theme: {
-        background: "#0f172a",
-        foreground: "#e2e8f0",
-      },
-    });
+    if (!terminalRef.current) return;
 
-    const fitAddon = new FitAddon();
+    const initTerminal = async () => {
+      // Dynamically import only in browser
+      const { Terminal } = await import("xterm");
+      const { FitAddon } = await import("xterm-addon-fit");
+      await import("xterm/css/xterm.css");
 
-    term.loadAddon(fitAddon);
-    term.open(terminalRef.current!);
-    fitAddon.fit();
+      const term = new Terminal({
+        cursorBlink: true,
+        fontSize: 14,
+        theme: {
+          background: "#0f172a",
+          foreground: "#e2e8f0",
+        },
+      });
 
-    termRef.current = term;
-
-    connectSocket(term);
-
-    const handleResize = () => {
+      const fitAddon = new FitAddon();
+      term.loadAddon(fitAddon);
+      term.open(terminalRef.current!);
       fitAddon.fit();
+
+      termRef.current = term;
+
+      connectSocket(term, fitAddon);
+
+      const handleResize = () => {
+        fitAddon.fit();
+      };
+
+      window.addEventListener("resize", handleResize);
+
+      return () => {
+        window.removeEventListener("resize", handleResize);
+        socketRef.current?.close();
+        term.dispose();
+      };
     };
 
-    window.addEventListener("resize", handleResize);
-
-    return () => {
-      window.removeEventListener("resize", handleResize);
-      socketRef.current?.close();
-      term.dispose();
-    };
+    initTerminal();
   }, []);
 
-  const connectSocket = (term: XTerm) => {
+  const connectSocket = (term: any, fitAddon: any) => {
     const socket = new WebSocket("ws://localhost:4000");
     socketRef.current = socket;
 
     socket.onopen = () => {
       setConnected(true);
+      fitAddon.fit();
     };
 
     socket.onmessage = (event) => {
@@ -59,15 +66,14 @@ export default function Page() {
 
     socket.onclose = () => {
       setConnected(false);
-      setTimeout(() => connectSocket(term), 2000);
+      setTimeout(() => connectSocket(term, fitAddon), 2000);
     };
 
     socket.onerror = () => {
       socket.close();
     };
 
-    // Important: Register once per connection
-    term.onData((data) => {
+    term.onData((data: string) => {
       if (socket.readyState === WebSocket.OPEN) {
         socket.send(
           JSON.stringify({
@@ -94,13 +100,7 @@ export default function Page() {
           Connecting...
         </div>
       )}
-      <div
-        ref={terminalRef}
-        style={{
-          height: "100%",
-          width: "100%",
-        }}
-      />
+      <div ref={terminalRef} style={{ height: "100%", width: "100%" }} />
     </div>
   );
 }

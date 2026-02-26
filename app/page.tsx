@@ -128,7 +128,7 @@ export default function Page() {
     }
 
     // Reset confirmation state
-    setConfirmationInput("");
+  setConfirmationInput("");
     setConfirmationError("");
     setOpenConfirmDialog(true);
   };
