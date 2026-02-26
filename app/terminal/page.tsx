@@ -15,7 +15,7 @@ export default function Page() {
       // Dynamically import only in browser
       const { Terminal } = await import("xterm");
       const { FitAddon } = await import("xterm-addon-fit");
-      await import("xterm/css/xterm.css");
+      // await import("xterm/css/xterm.css");
 
       const term = new Terminal({
         cursorBlink: true,
