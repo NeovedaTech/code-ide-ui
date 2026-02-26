@@ -29,7 +29,7 @@ export const fetchResultsInBatches = async (tokens: TokenList, problemId: string
 
     try {
       const res = await post<SubmissionsResponse>(
-        `${EXECUTION_ROUTES.GET_OUTPUT}`,
+        `https://execution.velocify.in${EXECUTION_ROUTES.GET_OUTPUT}`,
         { tokenStrings: Array.from(pendingTokens), problemId: problemId },
         {
           headers: getAuthHeaders(),

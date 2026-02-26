@@ -22,6 +22,7 @@ import {
 import { styled } from "@mui/material/styles";
 import { NEXT_PUBLIC_API_URL } from "@/constants/config";
 import Image from "next/image";
+import Link from "next/link";
 
 // Styled Components
 const StyledAppBar = styled(AppBar)({
@@ -87,8 +88,8 @@ const FormDialog = styled(Dialog)(({ theme }) => ({
   },
 }));
 
-const ASSESSMENT_ID_EASY = "6984415ac5f11adf882af70c";
-const ASSESSMENT_ID_HARD = "69844287c5f11adf882afdb0";
+const ASSESSMENT_ID_EASY = "699fc5a47f73793b0ef6dd2a";
+const ASSESSMENT_ID_HARD = "699fc5a47f73793b0ef6dd2a";
 
 export default function Page() {
   const [formData, setFormData] = useState({
@@ -304,6 +305,25 @@ export default function Page() {
                     </Typography>
                   </Box>
                 </Box>
+              </Box>
+
+              {/* Test Links */}
+              <Box sx={{ mt: 6, display: "flex", gap: 2, flexWrap: "wrap" }}>
+                <Link href="/playground" style={{ textDecoration: 'none' }}>
+                  <Button variant="outlined" sx={{ borderRadius: "12px", color: "white", borderColor: "rgba(59, 130, 246, 0.5)" }}>
+                    Test Playground
+                  </Button>
+                </Link>
+                <Link href={`/user?assessmentId=${ASSESSMENT_ID_EASY}&userId=${Math.random().toString(16).substring(2, 10)}${Math.random().toString(16).substring(2, 10)}${Math.random().toString(16).substring(2, 10)}`} style={{ textDecoration: 'none' }}>
+                  <Button variant="outlined" sx={{ borderRadius: "12px", color: "white", borderColor: "rgba(59, 130, 246, 0.5)" }}>
+                    Test Assessment
+                  </Button>
+                </Link>
+                <Link href="/terminal" style={{ textDecoration: 'none' }}>
+                  <Button variant="outlined" sx={{ borderRadius: "12px", color: "white", borderColor: "rgba(59, 130, 246, 0.5)" }}>
+                    Test Terminal
+                  </Button>
+                </Link>
               </Box>
             </Box>
 
