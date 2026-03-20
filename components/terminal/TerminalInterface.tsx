@@ -23,7 +23,7 @@ export default function TerminalInterface({ onCommand }: TerminalInterfaceProps)
     const { Terminal } = await import("xterm");
     const { FitAddon } = await import("xterm-addon-fit");
     // Ensure CSS is loaded for proper rendering
-    import("xterm/css/xterm.css");
+    import("xterm/css/xterm.css" as any);
 
     const term = new Terminal({
       cursorBlink: true,
