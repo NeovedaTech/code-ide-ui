@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   AppBar, Toolbar, Container, Typography, Button, Skeleton,
@@ -71,9 +71,9 @@ const SkeletonCard = styled(Skeleton)({
 });
 
 const LEVEL_COLORS: Record<string, { bg: string; text: string; border: string }> = {
-  beginner:     { bg: "rgba(34,197,94,0.1)",  text: "#22c55e", border: "rgba(34,197,94,0.3)" },
-  intermediate: { bg: "rgba(234,179,8,0.1)",  text: "#eab308", border: "rgba(234,179,8,0.3)" },
-  advanced:     { bg: "rgba(239,68,68,0.1)",  text: "#ef4444", border: "rgba(239,68,68,0.3)" },
+  beginner: { bg: "rgba(34,197,94,0.1)", text: "#22c55e", border: "rgba(34,197,94,0.3)" },
+  intermediate: { bg: "rgba(234,179,8,0.1)", text: "#eab308", border: "rgba(234,179,8,0.3)" },
+  advanced: { bg: "rgba(239,68,68,0.1)", text: "#ef4444", border: "rgba(239,68,68,0.3)" },
 };
 
 // ─── Skeleton grids ───────────────────────────────────────────────────────────
@@ -110,37 +110,37 @@ function AssessmentSkeletons() {
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-interface Role       { _id: string; roleId: number; name: string }
-interface Skill      { _id: string; skillId: number; name: string; level: string }
+interface Role { _id: string; roleId: number; name: string }
+interface Skill { _id: string; skillId: number; name: string; level: string }
 interface Assessment { _id: string; name: string; slug: string; sections: unknown[]; skillId?: number }
-interface Meta       { page: number; pages: number; total: number; limit: number }
+interface Meta { page: number; pages: number; total: number; limit: number }
 
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function Page() {
   const { user, logout, isLoading } = useAuth();
-  const router       = useRouter();
+  const router = useRouter();
   const searchParams = useSearchParams();
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
 
   // Step 1 — Roles
-  const [roles, setRoles]             = useState<Role[]>([]);
-  const [rolesMeta, setRolesMeta]     = useState<Meta | null>(null);
-  const [rolesPage, setRolesPage]     = useState(1);
+  const [roles, setRoles] = useState<Role[]>([]);
+  const [rolesMeta, setRolesMeta] = useState<Meta | null>(null);
+  const [rolesPage, setRolesPage] = useState(1);
   const [rolesSearch, setRolesSearch] = useState("");
   const [rolesLoading, setRolesLoading] = useState(false);
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
 
   // Step 2 — Skills
-  const [skills, setSkills]           = useState<Skill[]>([]);
-  const [skillsMeta, setSkillsMeta]   = useState<Meta | null>(null);
-  const [skillsPage, setSkillsPage]   = useState(1);
+  const [skills, setSkills] = useState<Skill[]>([]);
+  const [skillsMeta, setSkillsMeta] = useState<Meta | null>(null);
+  const [skillsPage, setSkillsPage] = useState(1);
   const [skillsLoading, setSkillsLoading] = useState(false);
   const [selectedSkill, setSelectedSkill] = useState<Skill | null>(null);
 
   // Step 3 — Assessments
-  const [assessments, setAssessments]         = useState<Assessment[]>([]);
+  const [assessments, setAssessments] = useState<Assessment[]>([]);
   const [assessmentsMeta, setAssessmentsMeta] = useState<Meta | null>(null);
   const [assessmentsPage, setAssessmentsPage] = useState(1);
   const [assessmentsLoading, setAssessmentsLoading] = useState(false);
@@ -149,7 +149,7 @@ export default function Page() {
   // ── URL sync helpers ──
   const pushParams = useCallback((roleId?: number, skillId?: number) => {
     const p = new URLSearchParams();
-    if (roleId  !== undefined) p.set("roleId",  String(roleId));
+    if (roleId !== undefined) p.set("roleId", String(roleId));
     if (skillId !== undefined) p.set("skillId", String(skillId));
     router.replace(`/?${p.toString()}`, { scroll: false });
   }, [router]);
@@ -164,7 +164,7 @@ export default function Page() {
     try {
       const p = new URLSearchParams({ page: String(page), limit: "12" });
       if (search.trim()) p.set("search", search.trim());
-      const res  = await fetch(`${ROLE_SKILL_ROUTES.ROLES}?${p}`);
+      const res = await fetch(`${ROLE_SKILL_ROUTES.ROLES}?${p}`);
       const data = await res.json();
       if (data.success) { setRoles(data.data); setRolesMeta(data.pagination); }
     } finally { setRolesLoading(false); }
@@ -174,7 +174,7 @@ export default function Page() {
     setSkillsLoading(true);
     try {
       const p = new URLSearchParams({ page: String(page), limit: "15" });
-      const res  = await fetch(`${ROLE_SKILL_ROUTES.SKILLS_BY_ROLE(roleId)}?${p}`);
+      const res = await fetch(`${ROLE_SKILL_ROUTES.SKILLS_BY_ROLE(roleId)}?${p}`);
       const data = await res.json();
       if (data.success) { setSkills(data.data); setSkillsMeta(data.pagination); return data.data; }
     } finally { setSkillsLoading(false); }
@@ -186,7 +186,7 @@ export default function Page() {
     try {
       const p = new URLSearchParams({ page: String(page), limit: "10" });
       if (skillId !== null) p.set("skillId", String(skillId));
-      const res  = await fetch(`${ASSESMENT_ROUTES.ALL}?${p}`);
+      const res = await fetch(`${ASSESMENT_ROUTES.ALL}?${p}`);
       const data = await res.json();
       if (data.success) { setAssessments(data.data); setAssessmentsMeta(data.pagination); }
     } finally { setAssessmentsLoading(false); }
@@ -195,7 +195,7 @@ export default function Page() {
   const fetchCompleted = useCallback(async (userId: string) => {
     try {
       const token = typeof window !== "undefined" ? localStorage.getItem("knovia_token") : null;
-      const res  = await fetch(USER_ROUTES.COMPLETED_ASSESSMENTS(userId), {
+      const res = await fetch(USER_ROUTES.COMPLETED_ASSESSMENTS(userId), {
         credentials: "include",
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
@@ -213,7 +213,7 @@ export default function Page() {
   // ── Restore state from URL params on first load ──
   useEffect(() => {
     if (!user) return;
-    const roleIdParam  = searchParams.get("roleId");
+    const roleIdParam = searchParams.get("roleId");
     const skillIdParam = searchParams.get("skillId");
     if (!roleIdParam) { fetchRoles(1, ""); return; }
 
@@ -238,7 +238,7 @@ export default function Page() {
         }
       }
     });
-   
+
   }, [user]);
 
   // Patch selectedRole name once roles are loaded
@@ -298,15 +298,18 @@ export default function Page() {
 
   if (isLoading || !user) {
     return (
-      <PageWrap>
-        <Container maxWidth="lg" sx={{ pt: 6 }}>
-          <Box display="grid" gridTemplateColumns="repeat(auto-fill, minmax(280px, 1fr))" gap={2}>
-            {Array.from({ length: 12 }).map((_, i) => (
-              <SkeletonCard key={i} variant="rectangular" height={88} />
-            ))}
-          </Box>
-        </Container>
-      </PageWrap>
+      <Suspense fallback={<>Loading...</>}>
+        <PageWrap>
+          <Container maxWidth="lg" sx={{ pt: 6 }}>
+            <Box display="grid" gridTemplateColumns="repeat(auto-fill, minmax(280px, 1fr))" gap={2}>
+              {Array.from({ length: 12 }).map((_, i) => (
+                <SkeletonCard key={i} variant="rectangular" height={88} />
+              ))}
+            </Box>
+          </Container>
+        </PageWrap>
+      </Suspense>
+
     );
   }
 
