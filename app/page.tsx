@@ -238,7 +238,7 @@ export default function Page() {
         }
       }
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [user]);
 
   // Patch selectedRole name once roles are loaded

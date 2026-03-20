@@ -3,9 +3,6 @@
 import React, { useState, useMemo, useCallback, useEffect } from "react";
 import { Box } from "@mui/material";
 import {
-  ResizablePanel,
-  ResizablePanelGroup,
-  ResizableHandle,
   Group,
   Panel,
   Separator,
@@ -83,7 +80,7 @@ export default function Page() {
 
   return (
     <Box sx={{ height: "100vh", width: "100%", overflow: "hidden" }}>
-      <Group direction="horizontal">
+      <Group>
         {/* Left Panel: Lessons */}
         <Panel defaultSize={40} minSize={30}>
           <LessonSidebar 
