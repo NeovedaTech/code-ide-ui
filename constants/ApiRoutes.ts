@@ -24,7 +24,7 @@ export const ASSESMENT_ROUTES = {
 
 export const EXECUTION_ROUTES = {
   RUN_CODE:    `${API}/api/v1/code-execution/eval`,
-  GET_OUTPUT:  `/api/v1/code-execution/fetch`,
+  GET_OUTPUT:  `${API}/api/v1/code-execution/fetch`,
   SUBMIT_CODE: `${API}/api/v1/code-execution/submit`,
 };
 
