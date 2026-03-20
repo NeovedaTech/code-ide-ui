@@ -1,10 +1,16 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { EXECUTION_ROUTES } from '@/constants/ApiRoutes';
-import { NEXT_PUBLIC_API_URL, NEXT_PUBLIC_EXECUTION_URL } from '@/constants/config';
+import { NEXT_PUBLIC_EXECUTION_URL } from '@/constants/config';
+import { getStoredToken } from '@/context/AuthContext';
 
 interface RequestOptions extends RequestInit {
     headers?: Record<string, string>;
+}
+
+function authHeaders(): Record<string, string> {
+    const token = getStoredToken();
+    return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
 async function handleResponse<T>(response: Response): Promise<T> {
@@ -16,16 +22,18 @@ async function handleResponse<T>(response: Response): Promise<T> {
 }
 
 export async function get<T>(path: string, params?: Record<string, any>, options?: RequestOptions): Promise<T> {
-    const url = new URL(`${NEXT_PUBLIC_API_URL}${path}`);
+    const url = new URL(path);
     if (params) {
         Object.keys(params).forEach(key => url.searchParams.append(key, params[key]));
     }
 
     const response = await fetch(url.toString(), {
         method: 'GET',
+        credentials: 'include',
         ...options,
         headers: {
             'Content-Type': 'application/json',
+            ...authHeaders(),
             ...options?.headers,
         },
     });
@@ -33,11 +41,13 @@ export async function get<T>(path: string, params?: Record<string, any>, options
 }
 
 export async function post<T>(path: string, data: any, options?: RequestOptions): Promise<T> {
-    const response = await fetch(`${NEXT_PUBLIC_API_URL}${path}`, {
+    const response = await fetch(path, {
         method: 'POST',
+        credentials: 'include',
         ...options,
         headers: {
             'Content-Type': 'application/json',
+            ...authHeaders(),
             ...options?.headers,
         },
         body: JSON.stringify(data),
@@ -46,11 +56,13 @@ export async function post<T>(path: string, data: any, options?: RequestOptions)
 }
 
 export async function put<T>(path: string, data: any, options?: RequestOptions): Promise<T> {
-    const response = await fetch(`${NEXT_PUBLIC_API_URL}${path}`, {
+    const response = await fetch(path, {
         method: 'PUT',
+        credentials: 'include',
         ...options,
         headers: {
             'Content-Type': 'application/json',
+            ...authHeaders(),
             ...options?.headers,
         },
         body: JSON.stringify(data),

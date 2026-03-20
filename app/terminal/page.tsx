@@ -1,106 +1,115 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useState, useMemo, useCallback, useEffect } from "react";
+import { Box } from "@mui/material";
+import {
+  ResizablePanel,
+  ResizablePanelGroup,
+  ResizableHandle,
+  Group,
+  Panel,
+  Separator,
+} from "react-resizable-panels";
+import LessonSidebar, { mockChapters, Lesson } from "@/components/terminal/LessonSidebar";
+import TerminalInterface from "@/components/terminal/TerminalInterface";
 
 export default function Page() {
-  const terminalRef = useRef<HTMLDivElement | null>(null);
-  const socketRef = useRef<WebSocket | null>(null);
-  const termRef = useRef<any>(null);
-  const [connected, setConnected] = useState(false);
+  const [selectedLessonId, setSelectedLessonId] = useState<string>(mockChapters[0].lessons[0].id);
+  const [completedLessonIds, setCompletedLessonIds] = useState<Set<string>>(new Set());
 
-  useEffect(() => {
-    if (!terminalRef.current) return;
-
-    const initTerminal = async () => {
-      // Dynamically import only in browser
-      const { Terminal } = await import("xterm");
-      const { FitAddon } = await import("xterm-addon-fit");
-      // await import("xterm/css/xterm.css");
-
-      const term = new Terminal({
-        cursorBlink: true,
-        fontSize: 14,
-        theme: {
-          background: "#0f172a",
-          foreground: "#e2e8f0",
-        },
-      });
-
-      const fitAddon = new FitAddon();
-      term.loadAddon(fitAddon);
-      term.open(terminalRef.current!);
-      fitAddon.fit();
-
-      termRef.current = term;
-
-      connectSocket(term, fitAddon);
-
-      const handleResize = () => {
-        fitAddon.fit();
-      };
-
-      window.addEventListener("resize", handleResize);
-
-      return () => {
-        window.removeEventListener("resize", handleResize);
-        socketRef.current?.close();
-        term.dispose();
-      };
-    };
-
-    initTerminal();
+  // Flattened lessons for easy navigation
+  const allLessons = useMemo(() => {
+    return mockChapters.flatMap(chapter => chapter.lessons);
   }, []);
 
-  const connectSocket = (term: any, fitAddon: any) => {
-    const socket = new WebSocket("ws://localhost:4000");
-    socketRef.current = socket;
+  const currentLessonIndex = useMemo(() => {
+    return allLessons.findIndex(l => l.id === selectedLessonId);
+  }, [selectedLessonId, allLessons]);
 
-    socket.onopen = () => {
-      setConnected(true);
-      fitAddon.fit();
-    };
+  const currentLesson = allLessons[currentLessonIndex];
 
-    socket.onmessage = (event) => {
-      term.write(event.data);
-    };
+  const handleNextLesson = useCallback(() => {
+    if (currentLessonIndex < allLessons.length - 1) {
+      setSelectedLessonId(allLessons[currentLessonIndex + 1].id);
+    }
+  }, [currentLessonIndex, allLessons]);
 
-    socket.onclose = () => {
-      setConnected(false);
-      setTimeout(() => connectSocket(term, fitAddon), 2000);
-    };
+  const handlePrevLesson = useCallback(() => {
+    if (currentLessonIndex > 0) {
+      setSelectedLessonId(allLessons[currentLessonIndex - 1].id);
+    }
+  }, [currentLessonIndex, allLessons]);
 
-    socket.onerror = () => {
-      socket.close();
-    };
+  const [lessonProgress, setLessonProgress] = useState<Record<string, string[]>>({});
 
-    term.onData((data: string) => {
-      if (socket.readyState === WebSocket.OPEN) {
-        socket.send(
-          JSON.stringify({
-            type: "input",
-            data,
-          })
-        );
+  // Monitor lesson progress to mark lessons as completed
+  useEffect(() => {
+    if (!currentLesson || !currentLesson.expectedCommands) return;
+    
+    const progress = lessonProgress[currentLesson.id] || [];
+    if (progress.length >= currentLesson.expectedCommands.length) {
+      if (!completedLessonIds.has(currentLesson.id)) {
+        setCompletedLessonIds(prev => {
+          const next = new Set(prev);
+          next.add(currentLesson.id);
+          return next;
+        });
       }
+    }
+  }, [lessonProgress, currentLesson, completedLessonIds]);
+
+  const handleTerminalCommand = useCallback((command: string) => {
+    if (!currentLesson || !currentLesson.expectedCommands) return;
+
+    const trimmedCommand = command.trim().toLowerCase();
+    
+    // Find matching expected commands that haven't been completed yet for this lesson
+    const currentProgress = lessonProgress[currentLesson.id] || [];
+    
+    const newMatches = currentLesson.expectedCommands.filter(expected => {
+      const lowerExpected = expected.toLowerCase();
+      // Match if the typed command contains the expected command
+      // AND we haven't already marked this specific expected command as matched
+      return trimmedCommand.includes(lowerExpected) && !currentProgress.includes(expected);
     });
-  };
+
+    if (newMatches.length > 0) {
+      setLessonProgress(prev => ({
+        ...prev,
+        [currentLesson.id]: [...(prev[currentLesson.id] || []), ...newMatches]
+      }));
+    }
+  }, [currentLesson, lessonProgress]);
 
   return (
-    <div style={{ height: "100vh", width: "100%", background: "#0f172a" }}>
-      {!connected && (
-        <div
+    <Box sx={{ height: "100vh", width: "100%", overflow: "hidden" }}>
+      <Group direction="horizontal">
+        {/* Left Panel: Lessons */}
+        <Panel defaultSize={40} minSize={30}>
+          <LessonSidebar 
+            selectedLessonId={selectedLessonId}
+            setSelectedLessonId={setSelectedLessonId}
+            completedLessonIds={completedLessonIds}
+            onNextLesson={handleNextLesson}
+            onPrevLesson={handlePrevLesson}
+            lessonProgress={lessonProgress}
+          />
+        </Panel>
+
+        {/* Resize Handle */}
+        <Separator
           style={{
-            position: "absolute",
-            top: 10,
-            right: 20,
-            color: "#f87171",
-            fontSize: "14px",
+            width: "4px",
+            background: "#e5e7eb",
+            cursor: "col-resize",
           }}
-        >
-          Connecting...
-        </div>
-      )}
-      <div ref={terminalRef} style={{ height: "100%", width: "100%" }} />
-    </div>
+        />
+
+        {/* Right Panel: Terminal */}
+        <Panel defaultSize={60} minSize={30}>
+          <TerminalInterface onCommand={handleTerminalCommand} />
+        </Panel>
+      </Group>
+    </Box>
   );
 }

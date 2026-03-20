@@ -14,7 +14,7 @@ interface MonacoEditorProps {
 }
 
 const computeMaxEditorHeight = () => {
-  return "calc(100vh - 80px)"; // same as calc(100vh - 80px)
+  return "calc(100vh - 40px)"; // same as calc(100vh - 80px)
 };
 
 const MAX_EDITOR_HEIGHT = computeMaxEditorHeight();

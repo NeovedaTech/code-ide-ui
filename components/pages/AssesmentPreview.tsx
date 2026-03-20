@@ -1,10 +1,11 @@
 "use client";
 
 import { useAssessmentBySolutionId } from "@/hooks/AssesmentApi";
-import { CheckCircle2, XCircle, Clock, Award, Code, FileText, AlertCircle, TrendingUp, Target } from "lucide-react";
+import { CheckCircle2, XCircle, Clock, Award, Code, FileText, AlertCircle, TrendingUp, Target, Copy, Check, Download } from "lucide-react";
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ConfirmBox, useConfirmBox } from "@/shared/ConfirmBox";
+import { ASSESMENT_ROUTES } from "@/constants/ApiRoutes";
 
 interface AssessmentPreviewProps {
     solutionId: string;
@@ -13,7 +14,15 @@ interface AssessmentPreviewProps {
 export default function AssessmentPreview({ solutionId }: AssessmentPreviewProps) {
     const { data: solution, isLoading, error } = useAssessmentBySolutionId({ solutionId });
     const router = useRouter();
+    const [copiedCert, setCopiedCert] = useState(false);
     const { isOpen: isEvaluatingModalOpen, openModal: openEvaluatingModal, closeModal: closeEvaluatingModal } = useConfirmBox();
+    const certId = `KAI-${solutionId}`;
+
+    const handleCopyCertId = () => {
+        navigator.clipboard.writeText(certId);
+        setCopiedCert(true);
+        setTimeout(() => setCopiedCert(false), 2000);
+    };
 
     useEffect(() => {
         if (solution && !solution.isEvaluated) {
@@ -70,20 +79,24 @@ export default function AssessmentPreview({ solutionId }: AssessmentPreviewProps
     let codingMaxScore = 0;
 
     if (hasQuizData) {
-        quizMaxScore = quizSnapshot.maxScore || 0;
+        // Sum actual marks from each question instead of snapshot maxScore
+        quizMaxScore = (quizSnapshot.questions || []).reduce(
+            (sum: number, q: any) => sum + (q.marks || 1), 0
+        );
         totalMaxScore += quizMaxScore;
     }
 
     if (hasCodingData) {
+        // Each test case = 1 mark; sum total test cases across all problems
         const codingAnswers = codingSection.codingAnswers?.[0] || {};
         let codingTotal = 0;
-        
+
         Object.keys(codingAnswers).forEach((key) => {
             if (codingAnswers[key]?.total) {
                 codingTotal += codingAnswers[key].total;
             }
         });
-        
+
         codingMaxScore = codingTotal;
         totalMaxScore += codingMaxScore;
     }
@@ -111,6 +124,26 @@ export default function AssessmentPreview({ solutionId }: AssessmentPreviewProps
                                         minute: '2-digit'
                                     })}
                                 </p>
+                                <div className="flex items-center gap-2 mt-3">
+                                    <Award className="w-4 h-4 text-yellow-300" />
+                                    <span className="text-yellow-300 text-xs font-semibold tracking-wide uppercase">Certificate ID</span>
+                                    <code className="text-white text-xs bg-white/10 rounded px-2 py-0.5 font-mono">{certId}</code>
+                                    <button
+                                        onClick={handleCopyCertId}
+                                        className="p-1 rounded hover:bg-white/20 transition-colors text-white"
+                                        title="Copy Certificate ID"
+                                    >
+                                        {copiedCert ? <Check className="w-3.5 h-3.5 text-green-300" /> : <Copy className="w-3.5 h-3.5" />}
+                                    </button>
+                                    <a
+                                        href={ASSESMENT_ROUTES.GET_CERTIFICATE(solutionId)}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex items-center gap-1 px-2.5 py-1 rounded bg-yellow-400/20 hover:bg-yellow-400/30 text-yellow-300 text-xs font-semibold transition-colors"
+                                    >
+                                        <Download className="w-3 h-3" /> Certificate
+                                    </a>
+                                </div>
                             </div>
                             <div className="text-right">
                                 <div className="text-5xl font-bold">{percentageScore}%</div>

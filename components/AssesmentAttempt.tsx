@@ -10,6 +10,7 @@ import { QuizSection } from "@/types/assessment";
 import { ErrorBox } from "@/shared/ErrorBox";
 import { LoadingBox } from "@/shared/LoadingBox";
 import { AutoSubmitBox } from "@/shared/AutosubmitBox";
+import Proctoring, { ProctoringLog } from "./Proctoring";
 
 export default function AssesmentAttempt() {
   const {
@@ -40,8 +41,13 @@ export default function AssesmentAttempt() {
   if (!hasStarted) return <AssesmentInstructions />;
   if (hasSubmitted)
     return <AssesmentSubmitted solutionId={solutionId as string} />;
+  const handleProctoringLog = (log: ProctoringLog) => {
+    console.log("[Proctoring]", log);
+  };
+
   return (
     <>
+      <Proctoring onLog={handleProctoringLog} />
       <AutoSubmitBox
         onClose={() => setAutoSubmit(false)}
         isOpen={autoSubmit}
