@@ -155,7 +155,7 @@ function StreamingPlayer({ chunks }: { chunks: PlaybackChunk[] }) {
       try {
         await sbReady(sb);
         if (cancelled || ms.readyState !== "open") return;
-        sb.appendBuffer(chunk0);
+        sb.appendBuffer(chunk0 as any);
         await sbReady(sb);
         setLoaded(1);
         videoRef.current?.play().catch(() => {});

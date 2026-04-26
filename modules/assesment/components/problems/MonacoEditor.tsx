@@ -157,3 +157,5 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({
     </Box>
   );
 };
+
+export default MonacoEditor;

@@ -2,11 +2,12 @@
 
 import React, { useState, useRef } from "react";
 import { Box, Button, CircularProgress, Typography, AppBar, Toolbar, Paper, FormControl, Select, MenuItem } from "@mui/material";
-import { MonacoEditor } from "@/components/problems/MonacoEditor";
+// import { MonacoEditor } from "@/components/problems/MonacoEditor";
 import { PlayArrow, Code as CodeIcon } from "@mui/icons-material";
 import axios from "axios";
 import { encodeBase64 } from "@/helpers/codeUtils";
 import { CheckCircle2, AlertCircle, X } from "lucide-react";
+import { MonacoEditor } from "@/modules/assesment/components/problems/MonacoEditor";
 
 const JUDGE0_URL = "https://execution.velocify.in";
 

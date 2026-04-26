@@ -7,8 +7,10 @@ import {
   Panel,
   Separator,
 } from "react-resizable-panels";
-import LessonSidebar, { mockChapters, Lesson } from "@/components/terminal/LessonSidebar";
-import TerminalInterface from "@/components/terminal/TerminalInterface";
+// import LessonSidebar, { mockChapters, Lesson } from "@/components/terminal/LessonSidebar";
+// import TerminalInterface from "@/components/terminal/TerminalInterface";
+import LessonSidebar, { mockChapters } from "@/modules/assesment/components/terminal/LessonSidebar";
+import { TerminalInterface } from "@/modules/assesment";
 
 export default function Page() {
   const [selectedLessonId, setSelectedLessonId] = useState<string>(mockChapters[0].lessons[0].id);
@@ -83,7 +85,7 @@ export default function Page() {
       <Group>
         {/* Left Panel: Lessons */}
         <Panel defaultSize={40} minSize={30}>
-          <LessonSidebar 
+          <LessonSidebar
             selectedLessonId={selectedLessonId}
             setSelectedLessonId={setSelectedLessonId}
             completedLessonIds={completedLessonIds}

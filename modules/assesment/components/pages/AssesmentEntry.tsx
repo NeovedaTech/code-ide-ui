@@ -694,7 +694,7 @@ function AssessmentLanding({
                 py: 1.5,
                 borderRadius: 1.5,
                 boxShadow: "none",
-                "&:hover": { boxShadow: "none", bgcolor: BRAND_DARK },
+                // "&:hover": { boxShadow: "none", bgcolor: BRAND_DARK },
               }}
             >
               {submitting ? (
