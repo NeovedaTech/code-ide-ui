@@ -11,6 +11,7 @@ export interface AuthUser {
   userId: string;
   name: string;
   email: string;
+  role: string;
   skillLevel: string;
   assessmentStatus: string;
 }
@@ -72,7 +73,10 @@ async function fetchMe(): Promise<AuthUser | null> {
   });
   if (!res.ok) { clear(); return null; }
   const data = await res.json();
-  return data.user ?? null;
+  const user = data.user ?? null;
+  // Re-persist so localStorage always has the latest role/fields from the server
+  if (user && token) localStorage.setItem("knovia_user", JSON.stringify(user));
+  return user;
 }
 
 // ─── Context ──────────────────────────────────────────────────────────────────

@@ -1,4 +1,4 @@
-import AssesmentPreview from '@/components/pages/AssesmentPreview';
+import AssesmentPreview from '@/modules/assesment/components/pages/AssesmentPreview';
 import React from 'react'
 
 export default async function page({ params }: { params: { id: string } }) {
