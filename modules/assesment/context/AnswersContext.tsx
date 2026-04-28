@@ -275,8 +275,12 @@ export const AnswersProvider = ({ children }: { children: ReactNode }) => {
         response: currentSectionAnswers as codingAnswer | quizAnswer,
         current: Number(currSectionNumber),
       });
-      // Invalidate the 'assesment' query to refetch assessment data after submission.
-      localStorage.clear();
+      // Remove only assessment-related localStorage keys (preserve auth tokens).
+      Object.keys(localStorage).forEach((key) => {
+        if (key.startsWith(`${solutionId}-`) || key.startsWith("code:")) {
+          localStorage.removeItem(key);
+        }
+      });
       queryClient.invalidateQueries({ queryKey: ["assesment"] });
     } catch (e) {
       console.error("Error submitting section:", e);
