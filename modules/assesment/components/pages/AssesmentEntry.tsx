@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   Box,
@@ -34,7 +34,7 @@ import { useAssessmentInfo } from "@/modules/assesment/hooks/AssesmentApi";
 import { getAssesment } from "@/modules/assesment/hooks/ApiCalls";
 import { useAuth } from "@/context/AuthContext";
 import AssesmentAttempt from "@/modules/assesment/components/AssesmentAttempt";
-import DeviceCheck from "@/modules/assesment/components/DeviceCheck";
+import DeviceCheck, { AcquiredStreams } from "@/modules/assesment/components/DeviceCheck";
 import { AnswersProvider } from "@/modules/assesment/context/AnswersContext";
 import { AssessmentProvider } from "@/modules/assesment/context/AssesmentContext";
 
@@ -55,74 +55,16 @@ function SectionIcon({ type }: { type: string }) {
 }
 
 // ─── Requirement row ────────────────────────────────────────────────────────────
-type PermStatus = "idle" | "checking" | "granted" | "denied";
 
 function RequirementRow({
   icon,
   label,
   required,
-  permStatus,
-  onRequest,
 }: {
   icon: React.ReactNode;
   label: string;
   required: boolean;
-  permStatus?: PermStatus;
-  onRequest?: () => void;
 }) {
-  const isPermissionRow = required && !!onRequest;
-
-  let trailing: React.ReactNode;
-  if (!required) {
-    trailing = (
-      <Typography variant="caption" sx={{ color: TEXT_SECONDARY }}>
-        Not required
-      </Typography>
-    );
-  } else if (!isPermissionRow) {
-    // Passcode or non-permission required items
-    trailing = <CheckCircleIcon sx={{ fontSize: 16, color: "#16a34a" }} />;
-  } else if (permStatus === "granted") {
-    trailing = <CheckCircleIcon sx={{ fontSize: 16, color: "#16a34a" }} />;
-  } else if (permStatus === "denied") {
-    trailing = (
-      <Button
-        size="small"
-        onClick={onRequest}
-        sx={{
-          fontSize: 11, fontWeight: 600, py: 0.4, px: 1.2, minWidth: 0,
-          bgcolor: "#fef2f2", color: "#dc2626", borderRadius: 1,
-          border: "1px solid #fecaca",
-          "&:hover": { bgcolor: "#fee2e2" },
-        }}
-      >
-        Retry
-      </Button>
-    );
-  } else {
-    // idle or checking
-    trailing = (
-      <Button
-        size="small"
-        disabled={permStatus === "checking"}
-        onClick={onRequest}
-        sx={{
-          fontSize: 11, fontWeight: 600, py: 0.4, px: 1.2, minWidth: 0,
-          bgcolor: "#e8f0fe", color: BRAND, borderRadius: 1,
-          border: `1px solid #c7d7f8`,
-          "&:hover": { bgcolor: "#d4e3fc" },
-          "&:disabled": { bgcolor: "#f0f0f0", color: TEXT_SECONDARY },
-        }}
-      >
-        {permStatus === "checking" ? (
-          <CircularProgress size={11} sx={{ color: BRAND }} />
-        ) : (
-          "Give Permission"
-        )}
-      </Button>
-    );
-  }
-
   return (
     <Box
       sx={{
@@ -154,7 +96,13 @@ function RequirementRow({
       >
         {label}
       </Typography>
-      {trailing}
+      {required ? (
+        <CheckCircleIcon sx={{ fontSize: 16, color: "#16a34a" }} />
+      ) : (
+        <Typography variant="caption" sx={{ color: TEXT_SECONDARY }}>
+          Not required
+        </Typography>
+      )}
     </Box>
   );
 }
@@ -283,7 +231,7 @@ function AssessmentLanding({
   onEnter,
 }: {
   assessmentId: string;
-  onEnter: () => void;
+  onEnter: (streams?: AcquiredStreams) => void;
 }) {
   const { user } = useAuth();
   const { data: info, isLoading, error } = useAssessmentInfo(assessmentId);
@@ -294,38 +242,6 @@ function AssessmentLanding({
   const [submitting, setSubmitting] = useState(false);
   const [err, setErr] = useState("");
   const [showDeviceCheck, setShowDeviceCheck] = useState(false);
-
-  // Per-permission status for the requirement rows
-  const [camPerm,    setCamPerm]    = useState<PermStatus>("idle");
-  const [micPerm,    setMicPerm]    = useState<PermStatus>("idle");
-  const [screenPerm, setScreenPerm] = useState<PermStatus>("idle");
-
-  const requestCamMic = async () => {
-    const needCam = info!.isProctored;
-    const needMic = info!.isAvEnabled;
-    if (needCam) setCamPerm("checking");
-    if (needMic) setMicPerm("checking");
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: needCam, audio: needMic });
-      stream.getTracks().forEach((t) => t.stop());
-      if (needCam) setCamPerm("granted");
-      if (needMic) setMicPerm("granted");
-    } catch {
-      if (needCam) setCamPerm("denied");
-      if (needMic) setMicPerm("denied");
-    }
-  };
-
-  const requestScreen = async () => {
-    setScreenPerm("checking");
-    try {
-      const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
-      stream.getTracks().forEach((t) => t.stop());
-      setScreenPerm("granted");
-    } catch {
-      setScreenPerm("denied");
-    }
-  };
 
   if (isLoading) {
     return (
@@ -367,12 +283,17 @@ function AssessmentLanding({
   const totalTime = info.sections.reduce((s, sec) => s + sec.maxTime, 0);
   const totalScore = info.sections.reduce((s, sec) => s + sec.maxScore, 0);
 
-  async function doBegin() {
+  async function doBegin(streams?: AcquiredStreams) {
     try {
       const result = await getAssesment(assessmentId, user!._id, passCode || undefined);
       queryClient.setQueryData(["assesment", assessmentId, user!._id], result);
-      onEnter();
+      onEnter(streams);
     } catch (e: any) {
+      // Stop streams on failure since we're not proceeding
+      if (streams) {
+        streams.camStream?.getTracks().forEach((t) => t.stop());
+        streams.screenStream?.getTracks().forEach((t) => t.stop());
+      }
       setErr(
         e?.response?.data?.message ??
           e?.message ??
@@ -583,24 +504,18 @@ function AssessmentLanding({
                 icon={<VideocamOutlinedIcon sx={{ fontSize: 16 }} />}
                 label="Camera access"
                 required={info.isProctored}
-                permStatus={camPerm}
-                onRequest={info.isProctored ? requestCamMic : undefined}
               />
               <Divider sx={{ borderColor: BORDER }} />
               <RequirementRow
                 icon={<MicNoneOutlinedIcon sx={{ fontSize: 16 }} />}
                 label="Microphone access"
                 required={info.isAvEnabled}
-                permStatus={micPerm}
-                onRequest={info.isAvEnabled ? requestCamMic : undefined}
               />
               <Divider sx={{ borderColor: BORDER }} />
               <RequirementRow
                 icon={<ScreenShareOutlinedIcon sx={{ fontSize: 16 }} />}
                 label="Screen sharing"
                 required={info.isScreenCapture}
-                permStatus={screenPerm}
-                onRequest={info.isScreenCapture ? requestScreen : undefined}
               />
               <Divider sx={{ borderColor: BORDER }} />
               <RequirementRow
@@ -726,6 +641,7 @@ export default function AssesmentEntry() {
   const { user } = useAuth();
   const { data: info } = useAssessmentInfo(assessmentId);
   const queryClient = useQueryClient();
+  const streamsRef = useRef<AcquiredStreams>({ camStream: null, screenStream: null });
 
   const storageKey = `asmt_entered_${assessmentId}`;
 
@@ -767,7 +683,8 @@ export default function AssesmentEntry() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [assessmentId, user?._id]);
 
-  const handleEnter = () => {
+  const handleEnter = (streams?: AcquiredStreams) => {
+    if (streams) streamsRef.current = streams;
     sessionStorage.setItem(storageKey, "1");
     setPhase("assessment");
   };
@@ -791,6 +708,8 @@ export default function AssesmentEntry() {
       isProctored={info?.isProctored ?? false}
       isAvEnabled={info?.isAvEnabled ?? false}
       isScreenCapture={info?.isScreenCapture ?? false}
+      initialCamStream={streamsRef.current.camStream}
+      initialScreenStream={streamsRef.current.screenStream}
     >
       <AnswersProvider>
         <AssesmentAttempt />

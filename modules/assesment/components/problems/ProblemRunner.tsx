@@ -11,8 +11,11 @@ import Check from "@mui/icons-material/Check";
 import CloudDone from "@mui/icons-material/CloudDone";
 import CloudUpload from "@mui/icons-material/CloudUpload";
 import RestartAlt from "@mui/icons-material/RestartAlt";
+import NavigateBeforeRounded from "@mui/icons-material/NavigateBeforeRounded";
+import NavigateNextRounded from "@mui/icons-material/NavigateNextRounded";
+import CheckCircleOutline from "@mui/icons-material/CheckCircleOutline";
 import { useAnswers } from "@/modules/assesment/context/AnswersContext";
-import { Button, Tooltip } from "@mui/material";
+import { Button, IconButton, Tooltip } from "@mui/material";
 import { Sync } from "@mui/icons-material";
 import { useAssessment } from "@/modules/assesment/context/AssesmentContext";
 const generateStorageKey = (
@@ -70,9 +73,27 @@ const getLanguageMode = (language: string): string => {
 export default function ProblemEditor({
   problem,
   sectionId,
+  problemIndex = 0,
+  totalProblems = 1,
+  hasPrev = false,
+  hasNext = false,
+  isSubmitted = false,
+  submittedCount = 0,
+  onPrev,
+  onNext,
+  onNextUnsubmitted,
 }: {
   problem: CodingProblem;
   sectionId: string;
+  problemIndex?: number;
+  totalProblems?: number;
+  hasPrev?: boolean;
+  hasNext?: boolean;
+  isSubmitted?: boolean;
+  submittedCount?: number;
+  onPrev?: () => void;
+  onNext?: () => void;
+  onNextUnsubmitted?: () => void;
 }) {
   const [selectedLanguage, setSelectedLanguage] = useState<string>(
     problem.languagesSupported?.[0] || "python",

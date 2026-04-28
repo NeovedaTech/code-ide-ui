@@ -36,12 +36,49 @@ export default function AssessmentCodeInterface({
     return section.problems.find((p) => p._id === currentProblemId);
   }, [section?.problems, currentProblemId]);
 
+  // Navigation helpers
+  const currentIndex = useMemo(() => {
+    if (!section?.problems || !currentProblemId) return 0;
+    return section.problems.findIndex((p) => p._id === currentProblemId);
+  }, [section?.problems, currentProblemId]);
+
+  const totalProblems = section?.problems?.length ?? 0;
+  const hasPrev = currentIndex > 0;
+  const hasNext = currentIndex < totalProblems - 1;
+
+  const goToPrev = useCallback(() => {
+    if (hasPrev && section?.problems) {
+      setCurrentProblemId(section.problems[currentIndex - 1]._id);
+    }
+  }, [hasPrev, section?.problems, currentIndex]);
+
+  const goToNext = useCallback(() => {
+    if (hasNext && section?.problems) {
+      setCurrentProblemId(section.problems[currentIndex + 1]._id);
+    }
+  }, [hasNext, section?.problems, currentIndex]);
+
+  const goToNextUnsubmitted = useCallback(() => {
+    if (!section?.problems) return;
+    const next = section.problems.find(
+      (p, i) => i > currentIndex && !currResponse?.codingAnswers[0]?.[p._id],
+    );
+    if (next) setCurrentProblemId(next._id);
+    else if (hasNext) goToNext();
+  }, [section?.problems, currentIndex, currResponse, hasNext, goToNext]);
+
   // const handleMouseDownLeft = (e: React.MouseEvent) => {
   //   e.preventDefault();
   //   setIsResizingLeft(true);
   // };
 
-  const { isSectionDone } = useAssessment();
+  const { isSectionDone, currResponse } = useAssessment();
+
+  const isCurrentSubmitted = !!(currentProblemId && currResponse?.codingAnswers[0]?.[currentProblemId]);
+  const submittedCount = useMemo(() => {
+    if (!section?.problems || !currResponse?.codingAnswers[0]) return 0;
+    return section.problems.filter((p) => currResponse.codingAnswers[0][p._id]).length;
+  }, [section?.problems, currResponse]);
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const initializeRef = useRef(false);
   useEffect(() => {
@@ -310,6 +347,15 @@ export default function AssessmentCodeInterface({
           <ProblemRunner
             sectionId={section?.sectionId as string}
             problem={currentProblem as CodingProblem}
+            problemIndex={currentIndex}
+            totalProblems={totalProblems}
+            hasPrev={hasPrev}
+            hasNext={hasNext}
+            isSubmitted={isCurrentSubmitted}
+            submittedCount={submittedCount}
+            onPrev={goToPrev}
+            onNext={goToNext}
+            onNextUnsubmitted={goToNextUnsubmitted}
           />
         </Box>
 

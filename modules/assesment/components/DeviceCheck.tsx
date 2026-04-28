@@ -21,11 +21,16 @@ const TEXT_SECONDARY = "#566474";
 
 type CheckStatus = "idle" | "checking" | "ok" | "error";
 
+export interface AcquiredStreams {
+  camStream: MediaStream | null;
+  screenStream: MediaStream | null;
+}
+
 export interface DeviceCheckProps {
   isProctored:     boolean;
   isAvEnabled:     boolean;
   isScreenCapture: boolean;
-  onComplete: () => Promise<void>;
+  onComplete: (streams: AcquiredStreams) => Promise<void>;
   onBack: () => void;
 }
 
@@ -49,6 +54,7 @@ export default function DeviceCheck({
   const screenStreamRef = useRef<MediaStream | null>(null);
   const audioRafRef     = useRef<number>(0);
   const audioCtxRef     = useRef<AudioContext | null>(null);
+  const passingForwardRef = useRef(false);
 
   const stopCamStream = useCallback(() => {
     cancelAnimationFrame(audioRafRef.current);
@@ -137,8 +143,11 @@ export default function DeviceCheck({
   useEffect(() => {
     if (isProctored || isAvEnabled) startCamMicCheck();
     return () => {
-      stopCamStream();
-      stopScreenStream();
+      // Only stop streams if we're going back, not forward to the assessment
+      if (!passingForwardRef.current) {
+        stopCamStream();
+        stopScreenStream();
+      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -146,14 +155,26 @@ export default function DeviceCheck({
   const allOk = camStatus === "ok" && micStatus === "ok" && screenStatus === "ok";
 
   const handleBegin = async () => {
-    // Stop test streams — AVProctoring will open fresh ones
-    stopCamStream();
-    stopScreenStream();
+    passingForwardRef.current = true;
+
+    // Clean up UI helpers (audio meter, video previews) but keep tracks alive
+    // so AVProctoring can reuse them without re-prompting the user.
+    cancelAnimationFrame(audioRafRef.current);
+    audioCtxRef.current?.close().catch(() => {});
+    audioCtxRef.current = null;
+    if (videoRef.current) videoRef.current.srcObject = null;
+    if (screenVideoRef.current) screenVideoRef.current.srcObject = null;
+    setMicLevel(0);
+
     setStarting(true);
     try {
-      await onComplete();
+      await onComplete({
+        camStream: camStreamRef.current,
+        screenStream: screenStreamRef.current,
+      });
     } catch {
-      // Parent handles error display and navigates back to landing
+      // Parent handles error — streams should be stopped on failure
+      passingForwardRef.current = false;
     } finally {
       setStarting(false);
     }

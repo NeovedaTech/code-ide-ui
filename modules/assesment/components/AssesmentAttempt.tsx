@@ -30,6 +30,8 @@ export default function AssesmentAttempt() {
     isProctored,
     isAvEnabled,
     isScreenCapture,
+    initialCamStream,
+    initialScreenStream,
   } = useAssessment();
 
   const SECTION_TYPE = currentSection?.type;
@@ -55,6 +57,8 @@ export default function AssesmentAttempt() {
     isProctored:     isProctored && avActive,
     isAvEnabled:     isAvEnabled && avActive,
     isScreenCapture: isScreenCapture && avActive,
+    initialCamStream,
+    initialScreenStream,
     onFaceViolation: useCallback(
       (type: "no_face" | "multiple_faces", detail: string) => faceViolationRef.current?.(type, detail),
       [],

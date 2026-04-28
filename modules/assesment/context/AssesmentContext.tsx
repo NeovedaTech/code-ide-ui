@@ -31,6 +31,8 @@ interface AssessmentContextType {
   isProctored: boolean;
   isAvEnabled: boolean;
   isScreenCapture: boolean;
+  initialCamStream: MediaStream | null;
+  initialScreenStream: MediaStream | null;
 }
 
 const AssessmentContext = createContext<AssessmentContextType | undefined>(
@@ -44,6 +46,8 @@ interface AssessmentProviderProps {
   isProctored?: boolean;
   isAvEnabled?: boolean;
   isScreenCapture?: boolean;
+  initialCamStream?: MediaStream | null;
+  initialScreenStream?: MediaStream | null;
 }
 
 export const AssessmentProvider: React.FC<AssessmentProviderProps> = ({
@@ -53,6 +57,8 @@ export const AssessmentProvider: React.FC<AssessmentProviderProps> = ({
   isProctored = false,
   isAvEnabled = false,
   isScreenCapture = false,
+  initialCamStream = null,
+  initialScreenStream = null,
 }) => {
   const [autoSubmit, setAutoSubmit] = useState<boolean>(false);
   const [isSectionDone, setIsSectionDone] = useState(false);
@@ -119,6 +125,8 @@ export const AssessmentProvider: React.FC<AssessmentProviderProps> = ({
         isProctored,
         isAvEnabled,
         isScreenCapture,
+        initialCamStream,
+        initialScreenStream,
       }}
     >
       {children}

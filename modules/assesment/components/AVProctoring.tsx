@@ -157,6 +157,8 @@ export function useAVProctoring({
   onFaceViolation,
   onCameraLost,
   onScreenLost,
+  initialCamStream,
+  initialScreenStream,
 }: {
   solutionId: string;
   assessmentId: string;
@@ -166,6 +168,8 @@ export function useAVProctoring({
   onFaceViolation?: (type: "no_face" | "multiple_faces", detail: string) => void;
   onCameraLost?: () => void;
   onScreenLost?: () => void;
+  initialCamStream?: MediaStream | null;
+  initialScreenStream?: MediaStream | null;
 }) {
   // ── Camera / mic refs ─────────────────────────────────────────────────────
   const mediaRecorderRef    = useRef<MediaRecorder | null>(null);
@@ -184,6 +188,10 @@ export function useAVProctoring({
 
   const activeRef      = useRef(false);
   const isUnloadingRef = useRef(false);
+
+  // Consume pre-acquired streams from DeviceCheck (used once, then cleared)
+  const initialCamRef    = useRef(initialCamStream ?? null);
+  const initialScreenRef = useRef(initialScreenStream ?? null);
 
   // Stable refs so callbacks don't cause effect re-runs
   const onCameraLostRef = useRef(onCameraLost);
@@ -342,7 +350,10 @@ export function useAVProctoring({
       } catch { /* first session */ }
 
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({
+        // Reuse pre-acquired stream from DeviceCheck if available
+        const preAcquired = initialCamRef.current;
+        initialCamRef.current = null; // consume once
+        const stream = preAcquired || await navigator.mediaDevices.getUserMedia({
           video: isProctored,
           audio: isAvEnabled,
         });
@@ -416,7 +427,10 @@ export function useAVProctoring({
 
     (async () => {
       try {
-        const stream = await navigator.mediaDevices.getDisplayMedia({
+        // Reuse pre-acquired stream from DeviceCheck if available
+        const preAcquired = initialScreenRef.current;
+        initialScreenRef.current = null; // consume once
+        const stream = preAcquired || await navigator.mediaDevices.getDisplayMedia({
           video: true,
           audio: false,
         });
