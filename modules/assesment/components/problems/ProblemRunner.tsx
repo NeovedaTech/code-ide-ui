@@ -107,6 +107,23 @@ export default function ProblemEditor({
   const { solutionId } = useAssessment();
   const { startExecution, isCodeRunning, isCodeSubmitting, startCodeSubmission } = useAnswers();
 
+  // Track when a submission just completed to show success banner
+  const [showSubmitSuccess, setShowSubmitSuccess] = useState(false);
+  const wasSubmittingRef = useRef(false);
+  useEffect(() => {
+    if (isCodeSubmitting) {
+      wasSubmittingRef.current = true;
+    } else if (wasSubmittingRef.current) {
+      wasSubmittingRef.current = false;
+      if (isSubmitted) setShowSubmitSuccess(true);
+    }
+  }, [isCodeSubmitting, isSubmitted]);
+
+  // Dismiss success banner when switching problems
+  useEffect(() => {
+    setShowSubmitSuccess(false);
+  }, [problem._id]);
+
   const handleSubmit = () => {
     startCodeSubmission({
       code,
@@ -204,7 +221,67 @@ export default function ProblemEditor({
 
   return (
     <div className="flex flex-col h-full bg-white overflow-hidden border-l border-gray-200">
-      <div className="flex bg-[] items-center justify-between px-6 py-3 bg-gray-50 border-gray-200">
+      {/* ── Problem navigation bar ── */}
+      <div className="flex items-center justify-between px-4 py-1.5 bg-white border-b border-gray-200">
+        <div className="flex items-center gap-2">
+          <Tooltip title="Previous problem">
+            <span>
+              <IconButton size="small" disabled={!hasPrev} onClick={onPrev} sx={{ p: 0.5 }}>
+                <NavigateBeforeRounded sx={{ fontSize: 20 }} />
+              </IconButton>
+            </span>
+          </Tooltip>
+          <span className="text-xs font-semibold text-gray-700 select-none">
+            Problem {problemIndex + 1} of {totalProblems}
+          </span>
+          <Tooltip title="Next problem">
+            <span>
+              <IconButton size="small" disabled={!hasNext} onClick={onNext} sx={{ p: 0.5 }}>
+                <NavigateNextRounded sx={{ fontSize: 20 }} />
+              </IconButton>
+            </span>
+          </Tooltip>
+          {isSubmitted && (
+            <span className="inline-flex items-center gap-1 ml-1 px-2 py-0.5 text-[11px] font-semibold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+              <CheckCircleOutline sx={{ fontSize: 13 }} />
+              Submitted
+            </span>
+          )}
+        </div>
+        <span className="text-[11px] font-medium text-gray-400">
+          {submittedCount}/{totalProblems} submitted
+        </span>
+      </div>
+
+      {/* ── Success banner after submission ── */}
+      {showSubmitSuccess && !isCodeSubmitting && (
+        <div className="flex items-center justify-between px-4 py-2.5 bg-emerald-50 border-b border-emerald-200">
+          <div className="flex items-center gap-2">
+            <CheckCircleOutline sx={{ fontSize: 18, color: "#16a34a" }} />
+            <span className="text-sm font-semibold text-emerald-800">
+              Problem submitted successfully!
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            {hasNext && (
+              <button
+                onClick={() => { setShowSubmitSuccess(false); onNextUnsubmitted?.(); }}
+                className="px-3 py-1 text-xs font-semibold rounded-md bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
+              >
+                Next Problem
+              </button>
+            )}
+            <button
+              onClick={() => setShowSubmitSuccess(false)}
+              className="px-2 py-1 text-xs font-medium rounded-md text-gray-500 hover:bg-gray-100 transition-colors"
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="flex items-center justify-between px-6 py-3 bg-gray-50 border-gray-200">
         <div className="relative" ref={dropdownRef}>
           <button
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}

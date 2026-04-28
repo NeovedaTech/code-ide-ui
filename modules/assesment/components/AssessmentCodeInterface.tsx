@@ -30,6 +30,8 @@ export default function AssessmentCodeInterface({
   const [isResizingSelectorRight, setIsResizingSelectorRight] = useState(false);
   const [selectorWidth, setSelectorWidth] = useState(380); // pixels
 
+  const { isSectionDone, currResponse } = useAssessment();
+
   // Find the current problem by ID
   const currentProblem = useMemo(() => {
     if (!section?.problems || !currentProblemId) return undefined;
@@ -45,6 +47,12 @@ export default function AssessmentCodeInterface({
   const totalProblems = section?.problems?.length ?? 0;
   const hasPrev = currentIndex > 0;
   const hasNext = currentIndex < totalProblems - 1;
+
+  const isCurrentSubmitted = !!(currentProblemId && currResponse?.codingAnswers[0]?.[currentProblemId]);
+  const submittedCount = useMemo(() => {
+    if (!section?.problems || !currResponse?.codingAnswers[0]) return 0;
+    return section.problems.filter((p) => currResponse.codingAnswers[0][p._id]).length;
+  }, [section?.problems, currResponse]);
 
   const goToPrev = useCallback(() => {
     if (hasPrev && section?.problems) {
@@ -66,19 +74,6 @@ export default function AssessmentCodeInterface({
     if (next) setCurrentProblemId(next._id);
     else if (hasNext) goToNext();
   }, [section?.problems, currentIndex, currResponse, hasNext, goToNext]);
-
-  // const handleMouseDownLeft = (e: React.MouseEvent) => {
-  //   e.preventDefault();
-  //   setIsResizingLeft(true);
-  // };
-
-  const { isSectionDone, currResponse } = useAssessment();
-
-  const isCurrentSubmitted = !!(currentProblemId && currResponse?.codingAnswers[0]?.[currentProblemId]);
-  const submittedCount = useMemo(() => {
-    if (!section?.problems || !currResponse?.codingAnswers[0]) return 0;
-    return section.problems.filter((p) => currResponse.codingAnswers[0][p._id]).length;
-  }, [section?.problems, currResponse]);
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const initializeRef = useRef(false);
   useEffect(() => {
