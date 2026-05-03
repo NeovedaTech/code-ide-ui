@@ -2,15 +2,9 @@
 
 import { EXECUTION_ROUTES } from '@/constants/ApiRoutes';
 import { NEXT_PUBLIC_EXECUTION_URL } from '@/constants/config';
-import { getStoredToken } from '@/context/AuthContext';
 
 interface RequestOptions extends RequestInit {
     headers?: Record<string, string>;
-}
-
-function authHeaders(): Record<string, string> {
-    const token = getStoredToken();
-    return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
 async function handleResponse<T>(response: Response): Promise<T> {
@@ -33,7 +27,6 @@ export async function get<T>(path: string, params?: Record<string, any>, options
         ...options,
         headers: {
             'Content-Type': 'application/json',
-            ...authHeaders(),
             ...options?.headers,
         },
     });
@@ -47,7 +40,6 @@ export async function post<T>(path: string, data: any, options?: RequestOptions)
         ...options,
         headers: {
             'Content-Type': 'application/json',
-            ...authHeaders(),
             ...options?.headers,
         },
         body: JSON.stringify(data),
@@ -62,7 +54,6 @@ export async function put<T>(path: string, data: any, options?: RequestOptions):
         ...options,
         headers: {
             'Content-Type': 'application/json',
-            ...authHeaders(),
             ...options?.headers,
         },
         body: JSON.stringify(data),

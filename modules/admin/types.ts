@@ -220,18 +220,21 @@ export interface PlaybackChunk {
   chunkIndex: number;
   url: string | null;
   expiresIn?: number;
+  error?: string;
 }
 
 export interface AdminProctoringData {
-  solutionId:           string;
-  violationCount:       number;
-  recordingStatus:      string;
-  recordingStartedAt:   string | null;
-  recordingEndedAt:     string | null;
-  screenRecordingStatus?: string;
-  logs:                 ProctoringLog[];
-  playback:             PlaybackChunk[];
-  screenPlayback:       PlaybackChunk[];
+  solutionId:                string;
+  violationCount:            number;
+  recordingStatus:           string;
+  recordingStartedAt:        string | null;
+  recordingEndedAt:          string | null;
+  screenRecordingStatus?:    string;
+  screenRecordingStartedAt?: string | null;
+  screenRecordingEndedAt?:   string | null;
+  logs:                      ProctoringLog[];
+  playback:                  PlaybackChunk[];
+  screenPlayback:            PlaybackChunk[];
 }
 
 // ── Query filter params ───────────────────────────────────────────────────────

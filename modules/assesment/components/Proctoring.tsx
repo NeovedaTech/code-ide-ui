@@ -23,6 +23,7 @@ export default function Proctoring({ onLog, onViolation }: ProctoringProps) {
   const [violationCount, setViolationCount] = useState(0);
   const [devtoolsOpen, setDevtoolsOpen] = useState(false);
   const devtoolsOpenRef = useRef(false);
+  const lastViolationTsRef = useRef(0);
 
   const log = useCallback(
     (entry: ProctoringLog) => {
@@ -33,6 +34,7 @@ export default function Proctoring({ onLog, onViolation }: ProctoringProps) {
 
   const violation = useCallback(
     (entry: ProctoringLog, message: string) => {
+      lastViolationTsRef.current = Date.now();
       log(entry);
       onViolation?.(entry);
       setViolationCount((c) => c + 1);
@@ -42,12 +44,21 @@ export default function Proctoring({ onLog, onViolation }: ProctoringProps) {
   );
 
   // --- Fullscreen ---
+  const [needsFullscreenGesture, setNeedsFullscreenGesture] = useState(false);
+
   const requestFullscreen = useCallback(() => {
     const el = document.documentElement;
-    if (el.requestFullscreen) el.requestFullscreen();
+    if (el.requestFullscreen) {
+      el.requestFullscreen().catch(() => {
+        // Browser blocked — needs a user gesture (e.g. after page refresh)
+        setNeedsFullscreenGesture(true);
+      });
+    }
   }, []);
 
   useEffect(() => {
+    // If already in fullscreen (e.g. initial entry), skip
+    if (document.fullscreenElement) return;
     requestFullscreen();
   }, [requestFullscreen]);
 
@@ -66,8 +77,10 @@ export default function Proctoring({ onLog, onViolation }: ProctoringProps) {
   }, [violation]);
 
   // --- Window blur (minimize / switch app) ---
+  // Skip if a visibilitychange violation already fired within 300ms (same user action)
   useEffect(() => {
     const handleBlur = () => {
+      if (Date.now() - lastViolationTsRef.current < 300) return;
       violation(
         { type: "window_blur", timestamp: timestamp(), detail: "Window lost focus" },
         "Window minimized or switched. Please return to the assessment.",
@@ -93,23 +106,34 @@ export default function Proctoring({ onLog, onViolation }: ProctoringProps) {
   }, [violation, requestFullscreen]);
 
   // --- DevTools detection (size heuristic) ---
+  // Account for browser zoom and require 2 consecutive detections to avoid
+  // false positives from sidebars, high-DPI screens, or transient resizes.
   useEffect(() => {
+    let consecutiveOpenCount = 0;
+
     const check = () => {
-      const widthDiff = window.outerWidth - window.innerWidth;
-      const heightDiff = window.outerHeight - window.innerHeight;
+      const dpr = window.devicePixelRatio || 1;
+      const widthDiff  = (window.outerWidth - window.innerWidth) / dpr;
+      const heightDiff = (window.outerHeight - window.innerHeight) / dpr;
       const open = widthDiff > DEVTOOLS_THRESHOLD || heightDiff > DEVTOOLS_THRESHOLD;
 
-      if (open && !devtoolsOpenRef.current) {
+      if (open) {
+        consecutiveOpenCount++;
+      } else {
+        consecutiveOpenCount = 0;
+      }
+
+      // Require 2 consecutive checks (2 seconds) before flagging
+      if (consecutiveOpenCount >= 2 && !devtoolsOpenRef.current) {
         devtoolsOpenRef.current = true;
         setDevtoolsOpen(true);
         violation(
-          { type: "devtools", timestamp: timestamp(), detail: `size diff w:${widthDiff} h:${heightDiff}` },
+          { type: "devtools", timestamp: timestamp(), detail: `size diff w:${widthDiff.toFixed(0)} h:${heightDiff.toFixed(0)}` },
           "Developer tools detected. Close DevTools to continue.",
         );
       } else if (!open && devtoolsOpenRef.current) {
         devtoolsOpenRef.current = false;
         setDevtoolsOpen(false);
-        // Dismiss the devtools modal automatically once they close it
         setViolationMessage((prev) =>
           prev === "Developer tools detected. Close DevTools to continue." ? null : prev,
         );
@@ -134,19 +158,12 @@ export default function Proctoring({ onLog, onViolation }: ProctoringProps) {
           { type: "devtools", timestamp: timestamp(), detail: `Blocked shortcut: ${e.key}` },
           "Developer tools shortcut blocked.",
         );
-        return;
       }
-
-      log({
-        type: "keystroke",
-        timestamp: timestamp(),
-        detail: e.key,
-      });
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [log, violation]);
+  }, [violation]);
 
   // --- Context menu block ---
   useEffect(() => {
@@ -154,6 +171,34 @@ export default function Proctoring({ onLog, onViolation }: ProctoringProps) {
     document.addEventListener("contextmenu", block);
     return () => document.removeEventListener("contextmenu", block);
   }, []);
+
+  // Fullscreen gesture required (e.g. after page refresh)
+  if (needsFullscreenGesture && !document.fullscreenElement) {
+    return (
+      <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-black/90 backdrop-blur-sm">
+        <div className="max-w-md rounded-2xl bg-white p-8 text-center shadow-2xl">
+          <div className="mb-4 text-5xl">🖥️</div>
+          <h2 className="mb-2 text-xl font-bold text-gray-900">Fullscreen Required</h2>
+          <p className="mb-6 text-gray-600 text-sm leading-relaxed">
+            This assessment must be completed in fullscreen mode. Click below to resume.
+          </p>
+          <button
+            onClick={() => {
+              const el = document.documentElement;
+              if (el.requestFullscreen) {
+                el.requestFullscreen().then(() => {
+                  setNeedsFullscreenGesture(false);
+                }).catch(() => {});
+              }
+            }}
+            className="rounded-lg bg-blue-600 px-8 py-3 font-semibold text-white hover:bg-blue-700 transition-colors"
+          >
+            Enter Fullscreen & Continue
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // DevTools-specific persistent overlay — cannot be dismissed manually
   if (devtoolsOpen) {

@@ -1,391 +1,259 @@
 import { useAnswers } from "@/modules/assesment/context/AnswersContext";
 import { ExecutionResult } from "@/types/execution";
-import { Box, CircularProgress, Skeleton } from "@mui/material";
-import { CheckCircle2, AlertCircle, X, Clock } from "lucide-react";
+import { Box, Skeleton } from "@mui/material";
+import { CheckCircle2, AlertCircle, X } from "lucide-react";
+import TerminalRounded from "@mui/icons-material/TerminalRounded";
 
-
-const CodeRunningSkeleton = () => {
-  return <Skeleton width={"100%"} height={"200px"} sx={{ margin: 0 }}></Skeleton>
-}
 export default function ProblemOutputBox() {
   const { results, isCodeRunning, isCodeSubmitting } = useAnswers();
 
   const getStatusInfo = (statusId: number, hasError: boolean) => {
-    if (Number(statusId) == 3) {
+    if (Number(statusId) === 3) {
       return {
         passed: !hasError,
-        icon: hasError ? (
-          <X className="w-4 h-4" />
-        ) : (
-          <CheckCircle2 className="w-4 h-4" />
-        ),
+        icon: hasError ? <X className="w-3.5 h-3.5" /> : <CheckCircle2 className="w-3.5 h-3.5" />,
         label: hasError ? "Failed" : "Passed",
-        bgColor: hasError ? "bg-red-500/10" : "bg-emerald-500/10",
-        textColor: hasError ? "text-red-600" : "text-emerald-600",
-        borderColor: hasError ? "border-red-500/30" : "border-emerald-500/30",
+        bg: hasError ? "#fef2f2" : "#f0fdf4",
+        text: hasError ? "#dc2626" : "#16a34a",
+        border: hasError ? "#fecaca" : "#bbf7d0",
       };
     }
     if (Number(statusId) === 4) {
       return {
         passed: false,
-        icon: <X className="w-4 h-4" />,
+        icon: <X className="w-3.5 h-3.5" />,
         label: "Wrong Answer",
-        bgColor: "bg-red-500/10",
-        textColor: "text-red-600",
-        borderColor: "border-red-500/30",
+        bg: "#fef2f2",
+        text: "#dc2626",
+        border: "#fecaca",
       };
     }
     if (statusId === 6 || statusId === 11) {
       return {
         passed: false,
-        icon: <AlertCircle className="w-4 h-4" />,
+        icon: <AlertCircle className="w-3.5 h-3.5" />,
         label: "Warning",
-        bgColor: "bg-amber-500/10",
-        textColor: "text-amber-600",
-        borderColor: "border-amber-500/30",
+        bg: "#fffbeb",
+        text: "#d97706",
+        border: "#fde68a",
       };
     }
     if (statusId === -1) {
       return {
         passed: false,
-        icon: <X className="w-4 h-4" />,
+        icon: <X className="w-3.5 h-3.5" />,
         label: "Error",
-        bgColor: "bg-red-500/10",
-        textColor: "text-red-600",
-        borderColor: "border-red-500/30",
+        bg: "#fef2f2",
+        text: "#dc2626",
+        border: "#fecaca",
       };
     }
     if (statusId === 5 || statusId === -2) {
       return {
         passed: false,
-        icon: <AlertCircle className="w-4 h-4" />,
-        label: "Timeout",
-        bgColor: "bg-slate-500/10",
-        textColor: "text-slate-600",
-        borderColor: "border-slate-500/30",
+        icon: <AlertCircle className="w-3.5 h-3.5" />,
+        label: "Time Limit",
+        bg: "#f8fafc",
+        text: "#64748b",
+        border: "#e2e8f0",
       };
     }
     return {
       passed: false,
-      icon: <AlertCircle className="w-4 h-4" />,
+      icon: <AlertCircle className="w-3.5 h-3.5" />,
       label: "Pending",
-      bgColor: "bg-blue-500/10",
-      textColor: "text-blue-600",
-      borderColor: "border-blue-500/30",
+      bg: "#eff6ff",
+      text: "#2563eb",
+      border: "#bfdbfe",
     };
   };
 
+  // Empty state
   if (!isCodeRunning && !isCodeSubmitting && (!results || results.length === 0)) {
     return (
-      <Box
-        sx={{
-          height: "100%",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          p: 2,
-        }}
-      >
-        <p className="text-xs text-gray-500 text-center">
+      <div className="flex flex-col items-center justify-center h-full px-6">
+        <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center mb-3">
+          <TerminalRounded sx={{ fontSize: 20, color: "#94a3b8" }} />
+        </div>
+        <p className="text-xs font-medium text-slate-400 text-center">
           Run your code to see test results
         </p>
-      </Box>
+      </div>
     );
   }
 
+  // Loading skeleton
   if (isCodeRunning || isCodeSubmitting) {
     return (
-      <Box
-        sx={{
-          height: "100%",
-          overflow: "auto",
-          display: "flex",
-
-          flexDirection: "column",
-          gap: 2,
-          p: 2,
-          backgroundColor: "#fafafa",
-        }}
-      >
-        {
-          Array.from({ length: isCodeRunning ? 2 : 7 }).map(() =>
-            <Skeleton sx={{ borderRadius: "10px" }} variant="rectangular" height={120} />
-          )
-        }
-      </Box>
+      <div className="flex flex-col h-full">
+        <div className="px-4 py-2.5 border-b border-slate-200 bg-white">
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+            Test Results
+          </span>
+        </div>
+        <div className="flex-1 overflow-auto p-3 space-y-2 bg-[#fafbfc]">
+          {Array.from({ length: isCodeRunning ? 2 : 7 }).map((_, i) => (
+            <Skeleton
+              key={i}
+              variant="rectangular"
+              height={80}
+              sx={{ borderRadius: "8px", bgcolor: "#f1f5f9" }}
+            />
+          ))}
+        </div>
+      </div>
     );
   }
 
+  const passedCount = results.filter((r: ExecutionResult) => {
+    const hasError = Boolean(r.stderr || r.compile_error);
+    return Number(r.status.id) === 3 && !hasError;
+  }).length;
 
   return (
-    <Box
-      sx={{
-        height: "100%",
-        overflow: "auto",
-        display: "flex",
-        flexDirection: "column",
+    <div className="flex flex-col h-full">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-200 bg-white">
+        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+          Test Results
+        </span>
+        <span className="text-[10px] font-bold tabular-nums text-slate-500">
+          <span className={passedCount === results.length ? "text-emerald-600" : "text-slate-500"}>
+            {passedCount}
+          </span>
+          /{results.length} passed
+        </span>
+      </div>
 
-        gap: 0,
-        backgroundColor: "#fafafa",
+      {/* Results list */}
+      <div className="flex-1 overflow-auto bg-[#fafbfc]">
+        {results.map((result: ExecutionResult, index: number) => {
+          const hasError = Boolean(result.stderr || result.compile_error);
+          const statusInfo = getStatusInfo(result.status.id, hasError);
+          const isPending = isCodeRunning || isCodeSubmitting || result.status.id === 0 || !result.status.id;
 
-      }}
-    >
-      {results.map((result: ExecutionResult, index: number) => {
-        const hasError = Boolean(result.stderr || result.compile_error);
-        const statusInfo = getStatusInfo(result.status.id, hasError);
-        const isLoading = isCodeRunning || isCodeSubmitting;
-        // Consider a result "pending" if it's loading and has no status yet
-        const isPending =
-          isLoading || result.status.id === 0 || !result.status.id;
-
-        return (
-          <Box
-            key={index}
-            sx={{
-              borderBottom:
-                index < results.length - 1 ? "1px solid #e5e7eb" : "none",
-              p: "14px 16px",
-              transition: "background-color 0.2s",
-              minHeight: isPending ? "160px" : "max-content",
-              "&:hover": {
-                backgroundColor: "#f3f4f6",
-              },
-
-            }}
-          >
-            {/* Test Case Header */}
-            <Box
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                mb: isPending ? 2 : 1.5,
-                gap: 2,
-              }}
+          return (
+            <div
+              key={index}
+              className={`px-4 py-3 ${index < results.length - 1 ? "border-b border-slate-100" : ""}`}
             >
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 1.5,
-                  flex: 1,
-                  minWidth: 0,
-                }}
-              >
-                {isPending ? (
-                  <Box
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 0.75,
-                      px: 1.5,
-                      py: 0.5,
-                      borderRadius: "4px",
-                      backgroundColor: "bg-slate-500/10",
-                      border: "1px solid border-slate-500/30",
-                    }}
-                  >
-                    <CircularProgress size={16} sx={{ color: "#64748b" }} />
-                    <span className="text-xs font-semibold text-slate-600">
-                      Running
-                    </span>
-                  </Box>
-                ) : (
-                  <Box
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 0.75,
-                      px: 1.5,
-                      py: 0.5,
-                      borderRadius: "4px",
-                      backgroundColor: statusInfo.bgColor,
-                      border: `1px solid ${statusInfo.borderColor}`,
-                    }}
-                  >
-                    <Box
-                      sx={{
-                        color: statusInfo.textColor,
-                        display: "flex",
-                        alignItems: "center",
+              {/* Case header */}
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    Case {index + 1}
+                  </span>
+                  {!isPending && (
+                    <span
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide"
+                      style={{
+                        backgroundColor: statusInfo.bg,
+                        color: statusInfo.text,
+                        border: `1px solid ${statusInfo.border}`,
                       }}
                     >
                       {statusInfo.icon}
-                    </Box>
-                    <span
-                      className={`text-xs font-semibold ${statusInfo.textColor}`}
-                    >
                       {statusInfo.label}
                     </span>
-                  </Box>
-                )}
-                <span className="text-xs text-gray-700 font-medium truncate">
-                  Case {index + 1}
-                </span>
-              </Box>
+                  )}
+                  {isPending && (
+                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-semibold text-slate-500 bg-slate-100 border border-slate-200">
+                      <div className="w-2.5 h-2.5 border border-slate-400 border-t-transparent rounded-full animate-spin" />
+                      Running
+                    </span>
+                  )}
+                </div>
 
-              {/* Time & Memory */}
+                {/* Time / Memory */}
+                {!isPending && (
+                  <div className="flex items-center gap-4 text-[10px]">
+                    <div className="text-right">
+                      <span className="font-medium text-slate-400 uppercase tracking-wider">Time </span>
+                      <span className="font-bold text-slate-600 tabular-nums">{result.time}s</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-medium text-slate-400 uppercase tracking-wider">Mem </span>
+                      <span className="font-bold text-slate-600 tabular-nums">{result.memory}kb</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Output */}
               {!isPending && (
-                <Box
-                  sx={{
-                    display: "flex",
-                    gap: 3,
-                    fontSize: "0.75rem",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  <Box sx={{ textAlign: "right" }}>
-                    <Box className="text-gray-500 font-medium">TIME</Box>
-                    <Box className="text-gray-800 font-semibold">
-                      {result.time}s
-                    </Box>
-                  </Box>
-                  <Box sx={{ textAlign: "right" }}>
-                    <Box className="text-gray-500 font-medium">MEMORY</Box>
-                    <Box className="text-gray-800 font-semibold">
-                      {result.memory}kb
-                    </Box>
-                  </Box>
-                </Box>
-              )}
-            </Box>
-
-            {/* Loading State */}
-            {isPending ? (
-              <Box
-                sx={{
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 2,
-                  py: 2,
-                }}
-              >
-                <CircularProgress size={16} sx={{ color: "#64748b" }} />
-                <p className="text-xs text-gray-600">
-                  {isCodeRunning ? "Running test case..." : "Submitting..."}
-                </p>
-              </Box>
-            ) : (
-              <>
-                {/* Output Section */}
-                {result.stdout || result.compile_error || result.stderr ? (
-                  <Box sx={{ mt: 1.5 }}>
-                    {result.stdout && (
-                      <>
-                        <Box sx={{ mb: 1.5 }}>
-                          <Box className="text-xs text-gray-600 font-semibold mb-1 uppercase tracking-wide">
-                            Input
-                          </Box>
-                          <Box
-                            sx={{
-                              backgroundColor: "#1a1a1a",
-                              borderRadius: "4px",
-                              p: "10px 12px",
-                              fontFamily: '"Courier New", monospace',
-                              fontSize: "0.75rem",
-                              color: "#d4d4d4",
-                              overflow: "auto",
-                              whiteSpace: "pre-wrap",
-                              wordBreak: "break-word",
-                              maxHeight: "120px",
-                              border: "1px solid #333",
-                              lineHeight: "1.4",
-                            }}
-                          >
-                            {result?.stdin ?? ""}
-                          </Box>
-                        </Box>
-                        <Box sx={{ mb: 1.5 }}>
-                          <Box className="text-xs text-gray-600 font-semibold mb-1 uppercase tracking-wide">
-                            Output
-                          </Box>
-                          <Box
-                            sx={{
-                              backgroundColor: "#1a1a1a",
-                              borderRadius: "4px",
-                              p: "10px 12px",
-                              fontFamily: '"Courier New", monospace',
-                              fontSize: "0.75rem",
-                              color: "#d4d4d4",
-                              overflow: "auto",
-                              whiteSpace: "pre-wrap",
-                              wordBreak: "break-word",
-                              maxHeight: "120px",
-                              border: "1px solid #333",
-                              lineHeight: "1.4",
-                            }}
-                          >
+                <>
+                  {result.stdout || result.compile_error || result.stderr ? (
+                    <div className="space-y-2">
+                      {result.stdout && (
+                        <>
+                          {result.stdin != null && (
+                            <TerminalBlock label="Input" color="default">
+                              {result.stdin}
+                            </TerminalBlock>
+                          )}
+                          <TerminalBlock label="Output" color="default">
                             {result.stdout}
-                          </Box>
-                        </Box>
-                      </>
-
-                    )}
-
-                    {result.compile_error && (
-                      <Box sx={{ mb: 1.5 }}>
-                        <Box className="text-xs text-red-700 font-semibold mb-1 uppercase tracking-wide">
-                          Compilation Error
-                        </Box>
-                        <Box
-                          sx={{
-                            backgroundColor: "#1a1a1a",
-                            borderRadius: "4px",
-                            p: "10px 12px",
-                            fontFamily: '"Courier New", monospace',
-                            fontSize: "0.75rem",
-                            color: "#ff6b6b",
-                            overflow: "auto",
-                            whiteSpace: "pre-wrap",
-                            wordBreak: "break-word",
-                            maxHeight: "120px",
-                            border: "1px solid #ff6b6b33",
-                            lineHeight: "1.4",
-                          }}
-                        >
+                          </TerminalBlock>
+                        </>
+                      )}
+                      {result.compile_error && (
+                        <TerminalBlock label="Compilation Error" color="error">
                           {result.compile_error}
-                        </Box>
-                      </Box>
-                    )}
-
-                    {result.stderr && (
-                      <Box sx={{ mb: 1.5 }}>
-                        <Box className="text-xs text-amber-700 font-semibold mb-1 uppercase tracking-wide">
-                          Runtime Error
-                        </Box>
-                        <Box
-                          sx={{
-                            backgroundColor: "#1a1a1a",
-                            borderRadius: "4px",
-                            p: "10px 12px",
-                            fontFamily: '"Courier New", monospace',
-                            fontSize: "0.75rem",
-                            color: "#ffd700",
-                            overflow: "auto",
-                            whiteSpace: "pre-wrap",
-                            wordBreak: "break-word",
-                            maxHeight: "120px",
-                            border: "1px solid #ffd70033",
-                            lineHeight: "1.4",
-                          }}
-                        >
+                        </TerminalBlock>
+                      )}
+                      {result.stderr && (
+                        <TerminalBlock label="Runtime Error" color="warning">
                           {result.stderr}
-                        </Box>
-                      </Box>
-                    )}
-                  </Box>
-                ) : (
-                  <Box className="text-xs text-gray-500 italic mt-1.5">
-                    No output generated
-                  </Box>
-                )}
-              </>
-            )}
-          </Box>
-        );
-      })}
-    </Box>
+                        </TerminalBlock>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-[10px] text-slate-400 italic">
+                      No output generated
+                    </p>
+                  )}
+                </>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function TerminalBlock({
+  label,
+  color,
+  children,
+}: {
+  label: string;
+  color: "default" | "error" | "warning";
+  children: React.ReactNode;
+}) {
+  const colors = {
+    default: { text: "#c9d1d9", border: "#30363d", label: "#8b949e" },
+    error:   { text: "#ff7b72", border: "#49201f", label: "#f85149" },
+    warning: { text: "#e3b341", border: "#3d2e00", label: "#d29922" },
+  };
+  const c = colors[color];
+
+  return (
+    <div>
+      <p className="text-[9px] font-bold uppercase tracking-wider mb-1" style={{ color: c.label }}>
+        {label}
+      </p>
+      <pre
+        className="text-[11px] leading-relaxed rounded-md px-3 py-2 overflow-auto whitespace-pre-wrap break-words max-h-[100px]"
+        style={{
+          backgroundColor: "#0d1117",
+          color: c.text,
+          border: `1px solid ${c.border}`,
+          fontFamily: '"SF Mono", "Fira Code", "Cascadia Code", monospace',
+        }}
+      >
+        {children}
+      </pre>
+    </div>
   );
 }

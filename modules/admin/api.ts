@@ -1,5 +1,4 @@
 import { get, post, put } from "@/helpers/api";
-import { getStoredToken } from "@/context/AuthContext";
 import { ADMIN_ROUTES, PROCTORING_ROUTES } from "@/constants/ApiRoutes";
 import type {
   AdminProctoringData, Assessment, AssessmentFilters, AssessmentFormData,
@@ -9,14 +8,10 @@ import type {
 
 // ── DELETE helper (not in the shared api.ts) ──────────────────────────────────
 async function del<T>(path: string): Promise<T> {
-  const token = getStoredToken();
   const res = await fetch(path, {
     method: "DELETE",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
+    headers: { "Content-Type": "application/json" },
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ message: res.statusText }));

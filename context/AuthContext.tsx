@@ -24,32 +24,6 @@ interface AuthState {
   logout: () => Promise<void>;
 }
 
-// ─── Storage helpers ──────────────────────────────────────────────────────────
-
-const TOKEN_KEY = "knovia_token";
-const USER_KEY  = "knovia_user";
-
-export function getStoredToken() {
-  if (typeof window === "undefined") return null;
-  return localStorage.getItem(TOKEN_KEY);
-}
-
-function getStoredUser(): AuthUser | null {
-  if (typeof window === "undefined") return null;
-  const raw = localStorage.getItem(USER_KEY);
-  return raw ? JSON.parse(raw) : null;
-}
-
-function persist(token: string, user: AuthUser) {
-  localStorage.setItem(TOKEN_KEY, token);
-  localStorage.setItem(USER_KEY, JSON.stringify(user));
-}
-
-function clear() {
-  localStorage.removeItem(TOKEN_KEY);
-  localStorage.removeItem(USER_KEY);
-}
-
 // ─── API helpers ──────────────────────────────────────────────────────────────
 
 async function authFetch(url: string, body: object) {
@@ -65,18 +39,12 @@ async function authFetch(url: string, body: object) {
 }
 
 async function fetchMe(): Promise<AuthUser | null> {
-  const token = getStoredToken();
-  if (!token) return null;
   const res = await fetch(AUTH_ROUTES.ME, {
     credentials: "include",
-    headers: { Authorization: `Bearer ${token}` },
   });
-  if (!res.ok) { clear(); return null; }
+  if (!res.ok) return null;
   const data = await res.json();
-  const user = data.user ?? null;
-  // Re-persist so localStorage always has the latest role/fields from the server
-  if (user && token) localStorage.setItem("knovia_user", JSON.stringify(user));
-  return user;
+  return data.user ?? null;
 }
 
 // ─── Context ──────────────────────────────────────────────────────────────────
@@ -86,12 +54,10 @@ const AuthContext = createContext<AuthState | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
 
-  // Single source of truth — resolves immediately from localStorage, then
-  // silently validates against /auth/me in the background.
+  // Single source of truth — validated against /auth/me using the httpOnly cookie.
   const { data: user = null, isLoading } = useQuery<AuthUser | null>({
     queryKey:          ["auth", "me"],
     queryFn:           fetchMe,
-    initialData:       getStoredUser,   // instant hydration — no spinner on load
     staleTime:         5 * 60 * 1000,  // re-validate every 5 min
     retry:             false,
   });
@@ -100,7 +66,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     mutationFn: ({ email, password }: { email: string; password: string }) =>
       authFetch(AUTH_ROUTES.LOGIN, { email, password }),
     onSuccess: (data) => {
-      persist(data.token, data.user);
+      // cookie is set by the backend response
       queryClient.setQueryData(["auth", "me"], data.user);
     },
   });
@@ -109,7 +75,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     mutationFn: ({ name, email, password, skillLevel }: { name: string; email: string; password: string; skillLevel: string }) =>
       authFetch(AUTH_ROUTES.REGISTER, { name, email, password, skillLevel }),
     onSuccess: (data) => {
-      persist(data.token, data.user);
+      // cookie is set by the backend response
       queryClient.setQueryData(["auth", "me"], data.user);
     },
   });
@@ -118,7 +84,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     mutationFn: () =>
       fetch(AUTH_ROUTES.LOGOUT, { method: "POST", credentials: "include" }).catch(() => {}),
     onSettled: () => {
-      clear();
       queryClient.setQueryData(["auth", "me"], null);
     },
   });

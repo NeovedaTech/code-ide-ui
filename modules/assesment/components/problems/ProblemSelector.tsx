@@ -101,25 +101,30 @@ export default function ProblemSelector({
   };
 
   return (
-    <div className="flex flex-col h-full bg-gradient-to-br from-slate-50 via-white to-slate-50 rounded-xl overflow-hidden border border-slate-200 shadow-lg">
+    <div className="flex flex-col h-full bg-white overflow-hidden">
       {/* Header */}
-      <div className="px-6 py-2 bg-white border-b border-slate-100 shadow-sm">
-        <div className="flex items-center gap-1 mb-0">
-          <CodeIcon sx={{ fontSize: 28, color: "#3b82f6" }} />
-          <Typography variant="h6" sx={{ fontWeight: 700, color: "#1e293b" }}>
+      <div className="px-5 py-3 bg-white border-b border-slate-200">
+        <div className="flex items-center gap-2">
+          <CodeIcon sx={{ fontSize: 18, color: "#3b82f6" }} />
+          <Typography variant="subtitle2" sx={{ fontWeight: 700, color: "#1e293b", fontSize: "0.8rem" }}>
             Coding Problems
           </Typography>
+          <Typography
+            variant="caption"
+            sx={{
+              color: "#94a3b8",
+              fontSize: "0.65rem",
+              fontWeight: 600,
+              ml: "auto",
+            }}
+          >
+            {problems.length} problem{problems.length !== 1 ? "s" : ""}
+          </Typography>
         </div>
-        <Typography
-          variant="caption"
-          sx={{ color: "#64748b", display: "block" }}
-        >
-          {problems.length} of {problemStats.total} problems
-        </Typography>
       </div>
 
       {/* Problems List */}
-      <div className="flex-1 overflow-auto px-6 py-4 bg-gradient-to-br from-slate-50 via-white to-slate-50">
+      <div className="flex-1 overflow-auto px-4 py-3 bg-[#fafbfc]">
         {/* {filteredProblems.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-64 text-slate-400">
             <SearchIcon sx={{ fontSize: 56, marginBottom: 2, opacity: 0.5 }} />
@@ -131,7 +136,7 @@ export default function ProblemSelector({
             </Typography>
           </div>
         ) : ( */}
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-2">
           {problems.map((problem) => {
             const isSubmitted = currResponse?.codingAnswers[0]?.[problem?._id];
             const isSelected = selectedId === problem._id
@@ -140,24 +145,23 @@ export default function ProblemSelector({
             return (
               <div
                 key={problem._id}
-                className={`bg-white relative hover:shadow-md border rounded-lg overflow-hidden transition-all duration-200 ${isSelected
-                  ? "border-blue-400 shadow-md ring-2 ring-blue-100 bg-gradient-to-r from-white to-blue-50"
-                  : "border-slate-200 "
+                className={`bg-white relative border rounded-lg overflow-hidden transition-all duration-150 ${isSelected
+                  ? "border-blue-400 ring-1 ring-blue-100"
+                  : "border-slate-200 hover:border-slate-300"
                   }`}
               >
                 {/* Problem Header */}
-                {
-                  isSubmitted &&
-                  <div className="absolute top-0 left-0  w-32 h-32 overflow-hidden">
-                    <div className={`absolute top-2 -left-10  bg-green-500 text-white text-center text-xs font-bold py-1 pl-9 pr-14 transform -rotate-45 shadow-md`}>
+                {isSubmitted && (
+                  <div className="absolute top-0 left-0 w-24 h-24 overflow-hidden pointer-events-none">
+                    <div className="absolute top-1.5 -left-8 bg-emerald-500 text-white text-center text-[8px] font-bold py-0.5 pl-8 pr-12 transform -rotate-45 shadow-sm">
                       Submitted
                     </div>
                   </div>
-                }
+                )}
 
                 <button
                   onClick={() => handleProblemSelect(problem._id)}
-                  className="w-full px-5 py-4 text-left  transition-colors"
+                  className="w-full px-4 py-3 text-left transition-colors"
                 >
                   <div className="flex justify-between items-start gap-4">
                     <div className="flex-1">
@@ -245,7 +249,7 @@ export default function ProblemSelector({
 
                 {/* Expanded Details */}
                 {isExpanded && (
-                  <div className="px-5 py-4 bg-gradient-to-br from-slate-50 to-white border-t border-slate-100 space-y-5">
+                  <div className="px-4 py-3 bg-slate-50 border-t border-slate-100 space-y-4">
                     {/* Full Description */}
                     {/* {problem.description && (
                       <div>

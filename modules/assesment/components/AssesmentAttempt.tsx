@@ -5,7 +5,7 @@ import AssessmentCodeInterface from "./AssessmentCodeInterface";
 import AssesmentQuizInterface from "./AssesmentQuizInterface";
 import AssessmentHeader from "./AssessmentHeader";
 import AssesmentSubmitted from "./AssesmentSubmitted";
-import AssesmentInstructions from "./AssesmentInstructions";
+import { useStartTest } from "@/modules/assesment/hooks/AssesmentApi";
 import { useAnswers } from "@/modules/assesment/context/AnswersContext";
 import { QuizSection } from "@/types/assessment";
 import { ErrorBox } from "@/shared/ErrorBox";
@@ -48,8 +48,10 @@ export default function AssesmentAttempt() {
     ? (type, detail) => logBuffer.current.push({ type, timestamp: new Date().toISOString(), detail })
     : undefined;
 
-  const [mediaLost, setMediaLost]   = useState<"camera" | "screen" | null>(null);
-  const [restoring, setRestoring]   = useState(false);
+  const [cameraLost, setCameraLost] = useState(false);
+  const [screenLost, setScreenLost] = useState(false);
+  const [restoring, setRestoring]   = useState<"camera" | "screen" | null>(null);
+  const [permError, setPermError]   = useState<string | null>(null);
 
   const { completeRecording, restartCamera, restartScreen } = useAVProctoring({
     solutionId:      solutionId  ?? "",
@@ -63,16 +65,32 @@ export default function AssesmentAttempt() {
       (type: "no_face" | "multiple_faces", detail: string) => faceViolationRef.current?.(type, detail),
       [],
     ),
-    onCameraLost: useCallback(() => setMediaLost("camera"), []),
-    onScreenLost: useCallback(() => setMediaLost("screen"), []),
+    onCameraLost: useCallback(() => setCameraLost(true), []),
+    onScreenLost: useCallback(() => setScreenLost(true), []),
   });
 
-  const handleRestoreMedia = async () => {
-    setRestoring(true);
-    const ok = mediaLost === "camera" ? await restartCamera() : await restartScreen();
-    setRestoring(false);
-    if (ok) setMediaLost(null);
-    // If failed, keep modal open so user can retry
+  const handleRestoreCamera = async () => {
+    setRestoring("camera");
+    setPermError(null);
+    const ok = await restartCamera();
+    setRestoring(null);
+    if (ok) {
+      setCameraLost(false);
+    } else {
+      setPermError("Camera access was denied. Check your browser's site settings (click the lock icon in the address bar) and allow camera access, then try again.");
+    }
+  };
+
+  const handleRestoreScreen = async () => {
+    setRestoring("screen");
+    setPermError(null);
+    const ok = await restartScreen();
+    setRestoring(null);
+    if (ok) {
+      setScreenLost(false);
+    } else {
+      setPermError("Screen sharing was denied. Please try again and select your entire screen.");
+    }
   };
 
   // Track whether AV was ever active so we can call completeRecording on submit
@@ -119,6 +137,17 @@ export default function AssesmentAttempt() {
     logBuffer.current.push(log);
   };
 
+  // ── Auto-start (instructions are shown on the landing page) ────────────────
+  const startTest = useStartTest();
+  const hasAutoStartedRef = useRef(false);
+  useEffect(() => {
+    if (!hasStarted && solutionId && !hasAutoStartedRef.current) {
+      hasAutoStartedRef.current = true;
+      startTest.mutate({ solutionId });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasStarted, solutionId]);
+
   // ── Render ───────────────────────────────────────────────────────────────────
   if (assessmentLoading) return <LoadingBox isOpen />;
 
@@ -133,52 +162,81 @@ export default function AssesmentAttempt() {
       />
     );
 
-  if (!hasStarted) return <AssesmentInstructions />;
+  if (!hasStarted) return <LoadingBox isOpen />;
   if (hasSubmitted) return <AssesmentSubmitted solutionId={solutionId as string} />;
 
   return (
     <>
-      {/* ── Re-permission modal — shown when camera/screen is lost mid-session ── */}
-      {mediaLost && (
+      {/* ── Re-permission modal — shown when camera and/or screen is lost ── */}
+      {(cameraLost || screenLost) && (
         <div style={{
           position: "fixed", inset: 0, zIndex: 10000,
           background: "rgba(0,0,0,0.88)", backdropFilter: "blur(6px)",
           display: "flex", alignItems: "center", justifyContent: "center", padding: 16,
         }}>
           <div style={{
-            maxWidth: 400, width: "100%", background: "#fff",
+            maxWidth: 420, width: "100%", background: "#fff",
             borderRadius: 16, padding: 32, textAlign: "center", boxShadow: "0 25px 60px rgba(0,0,0,0.4)",
           }}>
-            <div style={{ fontSize: 48, marginBottom: 16 }}>
-              {mediaLost === "camera" ? "📷" : "🖥️"}
-            </div>
             <h2 style={{ margin: "0 0 8px", color: "#dc2626", fontSize: 20, fontWeight: 700 }}>
-              {mediaLost === "camera" ? "Camera Access Lost" : "Screen Sharing Stopped"}
+              Permissions Required
             </h2>
-            <p style={{ margin: "0 0 8px", color: "#374151", fontSize: 14, lineHeight: 1.6 }}>
-              {mediaLost === "camera"
-                ? "Your camera is no longer accessible. Please re-grant access to continue."
-                : "Screen recording has stopped. Please re-share your screen to continue."}
+            <p style={{ margin: "0 0 20px", color: "#374151", fontSize: 14, lineHeight: 1.6 }}>
+              The following permissions must be restored to continue the assessment.
             </p>
-            <p style={{ margin: "0 0 24px", fontSize: 12, color: "#9ca3af" }}>
+
+            {permError && (
+              <div style={{
+                background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8,
+                padding: "10px 14px", marginBottom: 16, textAlign: "left",
+              }}>
+                <p style={{ margin: 0, fontSize: 12, color: "#991b1b", lineHeight: 1.5 }}>{permError}</p>
+              </div>
+            )}
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {cameraLost && (
+                <button
+                  disabled={restoring === "camera"}
+                  onClick={handleRestoreCamera}
+                  style={{
+                    background: "#1557a0", color: "#fff", border: "none",
+                    cursor: restoring === "camera" ? "not-allowed" : "pointer",
+                    borderRadius: 8, padding: "12px 20px", fontSize: 14, fontWeight: 600,
+                    opacity: restoring === "camera" ? 0.7 : 1,
+                    display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8,
+                  }}
+                >
+                  {restoring === "camera" && (
+                    <span style={{ width: 14, height: 14, border: "2px solid rgba(255,255,255,0.4)", borderTopColor: "#fff", borderRadius: "50%", display: "inline-block", animation: "spin 0.7s linear infinite" }} />
+                  )}
+                  {restoring === "camera" ? "Requesting..." : "Grant Camera & Microphone Access"}
+                </button>
+              )}
+
+              {screenLost && (
+                <button
+                  disabled={restoring === "screen"}
+                  onClick={handleRestoreScreen}
+                  style={{
+                    background: cameraLost ? "#475569" : "#1557a0", color: "#fff", border: "none",
+                    cursor: restoring === "screen" ? "not-allowed" : "pointer",
+                    borderRadius: 8, padding: "12px 20px", fontSize: 14, fontWeight: 600,
+                    opacity: restoring === "screen" ? 0.7 : 1,
+                    display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8,
+                  }}
+                >
+                  {restoring === "screen" && (
+                    <span style={{ width: 14, height: 14, border: "2px solid rgba(255,255,255,0.4)", borderTopColor: "#fff", borderRadius: "50%", display: "inline-block", animation: "spin 0.7s linear infinite" }} />
+                  )}
+                  {restoring === "screen" ? "Requesting..." : "Share Entire Screen"}
+                </button>
+              )}
+            </div>
+
+            <p style={{ margin: "16px 0 0", fontSize: 11, color: "#9ca3af" }}>
               This incident has been recorded.
             </p>
-            <button
-              disabled={restoring}
-              onClick={handleRestoreMedia}
-              style={{
-                background: "#1557a0", color: "#fff", border: "none", cursor: restoring ? "not-allowed" : "pointer",
-                borderRadius: 8, padding: "12px 28px", fontSize: 14, fontWeight: 600,
-                opacity: restoring ? 0.7 : 1, display: "inline-flex", alignItems: "center", gap: 8,
-              }}
-            >
-              {restoring && (
-                <span style={{ width: 16, height: 16, border: "2px solid rgba(255,255,255,0.4)", borderTopColor: "#fff", borderRadius: "50%", display: "inline-block", animation: "spin 0.7s linear infinite" }} />
-              )}
-              {restoring
-                ? "Requesting…"
-                : mediaLost === "camera" ? "Re-grant Camera Access" : "Re-share Screen"}
-            </button>
           </div>
         </div>
       )}

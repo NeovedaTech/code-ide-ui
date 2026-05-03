@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useMemo } from "react";
+import React, { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Box, Chip, CircularProgress, Divider, IconButton,
+  Box, Chip, CircularProgress, IconButton, Slider,
   LinearProgress, Skeleton, Tab, Tabs, Typography,
 } from "@mui/material";
 import ArrowBackIcon       from "@mui/icons-material/ArrowBack";
@@ -12,6 +12,11 @@ import VideocamOffIcon     from "@mui/icons-material/VideocamOff";
 import AccessTimeIcon      from "@mui/icons-material/AccessTime";
 import PersonIcon          from "@mui/icons-material/Person";
 import AssignmentIcon      from "@mui/icons-material/Assignment";
+import PlayArrowIcon       from "@mui/icons-material/PlayArrow";
+import PauseIcon           from "@mui/icons-material/Pause";
+import VolumeUpIcon        from "@mui/icons-material/VolumeUp";
+import VolumeOffIcon       from "@mui/icons-material/VolumeOff";
+import FullscreenIcon      from "@mui/icons-material/Fullscreen";
 import { useAdminSolution, useAdminProctoringData } from "@/modules/admin/hooks";
 import type { PlaybackChunk, ProctoringLog } from "@/modules/admin/types";
 
@@ -45,6 +50,13 @@ function relTime(iso: string) {
   });
 }
 
+function fmtDuration(secs: number): string {
+  if (!isFinite(secs) || secs < 0) return "0:00";
+  const m = Math.floor(secs / 60);
+  const s = Math.floor(secs % 60);
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
 function violationColor(n: number) {
   if (n === 0) return GREEN;
   if (n < 3)   return AMBER;
@@ -63,56 +75,102 @@ const EVENT_LABELS: Record<string, { label: string; color: string }> = {
   multiple_faces:  { label: "Multiple Faces",     color: RED },
 };
 
-// ── WebM init-segment stripper ────────────────────────────────────────────────
-// MediaRecorder timeslice emits: chunk-0 = [EBML header + Tracks + Cluster-0],
-// chunks 1+ = [EBML header + Tracks + Cluster-N] (after our fix).
-// Naively concatenating produces multiple EBML roots, which most parsers ignore
-// after the first. Fix: keep chunk-0 whole, strip [EBML + Tracks] from chunks
-// 1+ so we get one valid stream: [init][cluster-0][cluster-1]...
+// ── WebM binary helpers ───────────────────────────────────────────────────────
+// EBML header signature: 0x1A 0x45 0xDF 0xA3
+// Segment element ID:    0x18 0x53 0x80 0x67
+// Cluster element ID:    0x1F 0x43 0xB6 0x75
 //
-// Cluster EBML element ID: 0x1F 0x43 0xB6 0x75
+// Chrome's MediaRecorder with timeslice produces chunk-0 with a Segment element
+// whose size is set to the exact byte count of that chunk's content.  When we
+// concatenate more data after chunk-0, the browser's parser stops at that size
+// boundary and ignores everything else → only 9 seconds play.
+//
+// Fix: patch chunk-0's Segment size to the EBML "unknown size" marker so the
+// parser reads through ALL concatenated data until EOF.
+
+function hasEBMLHeader(data: Uint8Array): boolean {
+  return data.length >= 4 &&
+    data[0] === 0x1a && data[1] === 0x45 &&
+    data[2] === 0xdf && data[3] === 0xa3;
+}
+
+/** Find the first Cluster element (0x1F43B675) offset, skipping EBML header. */
 function findClusterOffset(data: Uint8Array): number {
-  for (let i = 0; i < data.length - 4; i++) {
-    if (
-      data[i]     === 0x1f && data[i + 1] === 0x43 &&
-      data[i + 2] === 0xb6 && data[i + 3] === 0x75
-    ) return i;
+  for (let i = 32; i < data.length - 4; i++) {
+    if (data[i] === 0x1f && data[i+1] === 0x43 &&
+        data[i+2] === 0xb6 && data[i+3] === 0x75) return i;
   }
-  return 0; // not found → use whole buffer (old chunk with no prepended init)
+  return -1;
 }
 
-// ── Detect actual WebM codec from binary header ───────────────────────────────
-// WebM Tracks element stores CodecID as ASCII strings (V_VP8, V_VP9, A_OPUS…).
-// Scan the first 4 KB of chunk-0 to build the correct MSE mime type.
-function detectWebMMime(data: Uint8Array): string {
-  const header = new TextDecoder().decode(data.slice(0, Math.min(data.length, 4096)));
-  const video  = header.includes("V_VP9") ? "vp9" : "vp8";
-  const audio  = header.includes("A_OPUS") || header.includes("A_VORBIS");
-  const mime   = audio
-    ? `video/webm; codecs="${video},opus"`
-    : `video/webm; codecs="${video}"`;
-  // Verify browser supports the detected type; fall back to codec-less hint
-  if (typeof MediaSource !== "undefined" && MediaSource.isTypeSupported(mime)) return mime;
-  return 'video/webm; codecs="vp8"'; // last-resort fallback
+/** Read the width (in bytes) of an EBML VINT from its leading byte. */
+function vintWidth(leadByte: number): number {
+  if (leadByte & 0x80) return 1;
+  if (leadByte & 0x40) return 2;
+  if (leadByte & 0x20) return 3;
+  if (leadByte & 0x10) return 4;
+  if (leadByte & 0x08) return 5;
+  if (leadByte & 0x04) return 6;
+  if (leadByte & 0x02) return 7;
+  if (leadByte & 0x01) return 8;
+  return 1;
 }
 
-// Wait until SourceBuffer is not updating
-const sbReady = (sb: SourceBuffer) =>
-  sb.updating
-    ? new Promise<void>((res, rej) => {
-        sb.addEventListener("updateend", () => res(), { once: true });
-        sb.addEventListener("error", rej,             { once: true });
-      })
-    : Promise.resolve();
+/**
+ * Patch chunk-0's Segment element to use "unknown size" so the browser parser
+ * continues reading through all concatenated data instead of stopping at the
+ * original chunk boundary.
+ */
+function patchSegmentSize(data: Uint8Array): Uint8Array {
+  // Segment ID is 0x18 0x53 0x80 0x67 — search in the first 64 bytes
+  for (let i = 0; i < Math.min(data.length - 12, 64); i++) {
+    if (data[i] === 0x18 && data[i+1] === 0x53 &&
+        data[i+2] === 0x80 && data[i+3] === 0x67) {
+      const sizeStart = i + 4;
+      const width = vintWidth(data[sizeStart]);
 
-// ── Streaming player (MSE) ────────────────────────────────────────────────────
-// Chunks are fetched and appended one-by-one via MediaSource API.
-// Playback starts as soon as chunk-0 is buffered — no need to download all chunks first.
-function StreamingPlayer({ chunks }: { chunks: PlaybackChunk[] }) {
+      // Write "unknown size" marker for this VINT width (all data bits = 1)
+      // 1→0xFF  2→0x7F,FF  3→0x3F,FF,FF  4→0x1F,FF,FF,FF  ...  8→0x01,FF×7
+      const patched = new Uint8Array(data);
+      // First byte: keep only the VINT width marker bit, set data bits to 1
+      patched[sizeStart] = (1 << (8 - width)) | ((1 << (8 - width)) - 1);
+      for (let j = 1; j < width; j++) patched[sizeStart + j] = 0xff;
+      return patched;
+    }
+  }
+  return data; // Segment not found — return unchanged
+}
+
+/** Strip EBML + Segment/Info/Tracks from a chunk that has its own header,
+ *  returning only the Cluster data for concatenation. */
+function extractClusterData(raw: Uint8Array): Uint8Array {
+  if (!hasEBMLHeader(raw)) return raw;
+  const offset = findClusterOffset(raw);
+  return offset > 0 ? raw.subarray(offset) : raw;
+}
+
+// ── Blob-concat player ────────────────────────────────────────────────────────
+// Downloads all chunks in parallel, patches chunk-0's Segment size to "unknown",
+// strips duplicate headers from chunks 1+ (if present), concatenates into one
+// Blob, and hands it to a native <video> element.
+
+function StreamingPlayer({
+  chunks,
+}: {
+  chunks: PlaybackChunk[];
+}) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const msUrlRef = useRef("");
-  const [loaded, setLoaded]   = useState(0);
-  const [phase, setPhase]     = useState<"idle" | "streaming" | "done" | "error">("idle");
+  const containerRef = useRef<HTMLDivElement>(null);
+  const blobUrlRef = useRef("");
+  const [loaded, setLoaded]     = useState(0);
+  const [phase, setPhase]       = useState<"idle" | "loading" | "done" | "error">("idle");
+
+  // Playback state
+  const [playing, setPlaying]       = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration]     = useState(0);
+  const [muted, setMuted]           = useState(false);
+  const [seeking, setSeeking]       = useState(false);
 
   const valid = useMemo(
     () => [...chunks.filter((c) => c.url)].sort((a, b) => a.chunkIndex - b.chunkIndex),
@@ -120,87 +178,218 @@ function StreamingPlayer({ chunks }: { chunks: PlaybackChunk[] }) {
     [chunks.map((c) => c.url).join("|")],
   );
 
+  // ── Resolve real duration (WebM blobs often report Infinity) ────────────
+  const resolveDuration = useCallback(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    if (isFinite(v.duration) && v.duration > 0) {
+      setDuration(v.duration);
+      return;
+    }
+    // Trick: seek to a huge time — browser clamps to real end, revealing duration
+    const prev = v.currentTime;
+    v.currentTime = 1e10;
+    const onSeeked = () => {
+      v.removeEventListener("seeked", onSeeked);
+      if (isFinite(v.duration) && v.duration > 0) setDuration(v.duration);
+      else setDuration(v.currentTime); // fallback: where it actually landed
+      v.currentTime = prev;
+    };
+    v.addEventListener("seeked", onSeeked, { once: true });
+  }, []);
+
+  // ── Build blob from downloaded buffers ───────────────────────────────
+  // Three strategies tried in order:
+  //   1. Patched concat (patch Segment size to unknown, strip dup headers)
+  //   2. Raw concat (no patching — works when Segment already has unknown size)
+  //   3. Chunk-0 only (last resort — shows first ~10s)
+  const buildBlob = useCallback((buffers: (ArrayBuffer | null)[], strategy: number): Blob | null => {
+    const nonEmpty = buffers.filter((b): b is ArrayBuffer => b != null && b.byteLength > 0);
+    if (nonEmpty.length === 0) return null;
+
+    if (strategy === 3) {
+      // Chunk-0 only
+      console.log("[StreamingPlayer] fallback: chunk-0 only");
+      return new Blob([nonEmpty[0]], { type: "video/webm" });
+    }
+
+    if (strategy === 2) {
+      // Raw concatenation — no patching, no stripping
+      console.log("[StreamingPlayer] trying: raw concat");
+      return new Blob(nonEmpty, { type: "video/webm" });
+    }
+
+    // Strategy 1: patched concat
+    console.log("[StreamingPlayer] trying: patched concat");
+    const parts: Uint8Array[] = [];
+    // Use original buffer index to identify chunk-0
+    let isFirst = true;
+    for (let i = 0; i < buffers.length; i++) {
+      if (!buffers[i] || buffers[i]!.byteLength === 0) continue;
+      const raw = new Uint8Array(buffers[i]!);
+      if (isFirst) {
+        parts.push(patchSegmentSize(raw));
+        isFirst = false;
+      } else if (hasEBMLHeader(raw)) {
+        parts.push(extractClusterData(raw));
+      } else {
+        parts.push(raw);
+      }
+    }
+    return parts.length > 0 ? new Blob(parts as BlobPart[], { type: "video/webm" }) : null;
+  }, []);
+
+  // ── Video event listeners ──────────────────────────────────────────────
+  const strategyRef = useRef(1);
+  const buffersRef  = useRef<(ArrayBuffer | null)[]>([]);
+
+  const tryNextStrategy = useCallback(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    strategyRef.current++;
+    if (strategyRef.current > 3) {
+      setPhase("error");
+      return;
+    }
+    console.warn(`[StreamingPlayer] strategy ${strategyRef.current - 1} failed, trying ${strategyRef.current}`);
+    if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current);
+    const blob = buildBlob(buffersRef.current, strategyRef.current);
+    if (!blob) { setPhase("error"); return; }
+    blobUrlRef.current = URL.createObjectURL(blob);
+    v.src = blobUrlRef.current;
+    v.load();
+  }, [buildBlob]);
+
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    const onTime  = () => { if (!seeking) setCurrentTime(v.currentTime); };
+    const onPlay  = () => setPlaying(true);
+    const onPause = () => setPlaying(false);
+    const onMeta  = () => {
+      resolveDuration();
+      v.play().catch(() => {});
+    };
+    const onDur   = () => resolveDuration();
+    const onError = () => {
+      console.error("[StreamingPlayer] video error:", v.error?.message, v.error?.code);
+      tryNextStrategy();
+    };
+    v.addEventListener("timeupdate", onTime);
+    v.addEventListener("play", onPlay);
+    v.addEventListener("pause", onPause);
+    v.addEventListener("loadedmetadata", onMeta);
+    v.addEventListener("durationchange", onDur);
+    v.addEventListener("error", onError);
+    return () => {
+      v.removeEventListener("timeupdate", onTime);
+      v.removeEventListener("play", onPlay);
+      v.removeEventListener("pause", onPause);
+      v.removeEventListener("loadedmetadata", onMeta);
+      v.removeEventListener("durationchange", onDur);
+      v.removeEventListener("error", onError);
+    };
+  }, [resolveDuration, seeking, tryNextStrategy]);
+
+  // ── Download + concat ──────────────────────────────────────────────────
   useEffect(() => {
     if (!valid.length || !videoRef.current) return;
 
     let cancelled = false;
-    const ms = new MediaSource();
-    msUrlRef.current = URL.createObjectURL(ms);
-    videoRef.current.src = msUrlRef.current;
+    setPhase("loading");
+    setLoaded(0);
+    strategyRef.current = 1;
 
-    ms.addEventListener("sourceopen", async () => {
-      let sb: SourceBuffer;
+    (async () => {
+      const buffers: (ArrayBuffer | null)[] = new Array(valid.length).fill(null);
+      let completedCount = 0;
 
-      // ── Fetch chunk-0 first so we can detect the actual codec ────────────────
-      let chunk0: Uint8Array;
-      try {
-        const res = await fetch(valid[0].url!);
-        if (!res.ok) throw new Error(`${res.status}`);
-        chunk0 = new Uint8Array(await res.arrayBuffer());
-      } catch {
+      await Promise.all(
+        valid.map(async (chunk, i) => {
+          try {
+            const res = await fetch(chunk.url!);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            buffers[i] = await res.arrayBuffer();
+          } catch (e) {
+            console.warn(`[StreamingPlayer] chunk ${chunk.chunkIndex} failed:`, e);
+            buffers[i] = null;
+          } finally {
+            completedCount++;
+            if (!cancelled) setLoaded(completedCount);
+          }
+        }),
+      );
+
+      if (cancelled) return;
+
+      // Log chunk info
+      const sizes = buffers.map((b, i) => {
+        if (!b) return `chunk-${i}: FAILED`;
+        const u8 = new Uint8Array(b);
+        const hdr = hasEBMLHeader(u8) ? "WebM" : "cont";
+        return `chunk-${i}: ${(b.byteLength / 1024).toFixed(1)}KB [${hdr}]`;
+      });
+      console.log("[StreamingPlayer] downloaded:", sizes.join(", "));
+
+      buffersRef.current = buffers;
+      const blob = buildBlob(buffers, 1);
+      if (!blob) {
         if (!cancelled) setPhase("error");
         return;
       }
 
-      const mime = detectWebMMime(chunk0);
-      try {
-        sb = ms.addSourceBuffer(mime);
-      } catch {
-        setPhase("error");
-        return;
-      }
-      setPhase("streaming");
-
-      // Append chunk-0 (full — init segment + cluster)
-      try {
-        await sbReady(sb);
-        if (cancelled || ms.readyState !== "open") return;
-        sb.appendBuffer(chunk0 as any);
-        await sbReady(sb);
-        setLoaded(1);
-        videoRef.current?.play().catch(() => {});
-      } catch {
-        if (!cancelled) setPhase("error");
-        return;
-      }
-
-      // ── Remaining chunks ─────────────────────────────────────────────────────
-      for (let i = 1; i < valid.length; i++) {
-        if (cancelled || ms.readyState !== "open") break;
-        try {
-          const res = await fetch(valid[i].url!);
-          if (!res.ok) throw new Error(`${res.status}`);
-          const raw = new Uint8Array(await res.arrayBuffer());
-
-          // Strip prepended init segment — append only the cluster data.
-          const data = raw.subarray(findClusterOffset(raw));
-
-          await sbReady(sb);
-          if (cancelled || ms.readyState !== "open") break;
-          sb.appendBuffer(data);
-          await sbReady(sb);
-
-          setLoaded(i + 1);
-        } catch {
-          if (!cancelled) setPhase("error");
-          return;
-        }
-      }
-
-      if (!cancelled && ms.readyState === "open") {
-        try { ms.endOfStream(); } catch { /* ignore */ }
+      blobUrlRef.current = URL.createObjectURL(blob);
+      if (!cancelled && videoRef.current) {
+        videoRef.current.src = blobUrlRef.current;
+        videoRef.current.load();
         setPhase("done");
       }
-    }, { once: true });
+    })();
 
     return () => {
       cancelled = true;
-      if (ms.readyState === "open") { try { ms.endOfStream(); } catch { /* ignore */ } }
-      URL.revokeObjectURL(msUrlRef.current);
-      msUrlRef.current = "";
+      if (blobUrlRef.current) {
+        URL.revokeObjectURL(blobUrlRef.current);
+        blobUrlRef.current = "";
+      }
     };
-  }, [valid]);
+  }, [valid, buildBlob]);
 
+  // ── Controls ───────────────────────────────────────────────────────────
+  const togglePlay = () => {
+    const v = videoRef.current;
+    if (!v) return;
+    if (v.paused) v.play().catch(() => {});
+    else v.pause();
+  };
+
+  const toggleMute = () => {
+    const v = videoRef.current;
+    if (!v) return;
+    v.muted = !v.muted;
+    setMuted(v.muted);
+  };
+
+  const handleSeek = (_: Event, val: number | number[]) => {
+    const t = typeof val === "number" ? val : val[0];
+    setCurrentTime(t);
+    setSeeking(true);
+  };
+
+  const handleSeekCommit = (_: React.SyntheticEvent | Event, val: number | number[]) => {
+    const t = typeof val === "number" ? val : val[0];
+    if (videoRef.current) videoRef.current.currentTime = t;
+    setSeeking(false);
+  };
+
+  const handleFullscreen = () => {
+    const el = containerRef.current;
+    if (!el) return;
+    if (document.fullscreenElement) document.exitFullscreen();
+    else el.requestFullscreen().catch(() => {});
+  };
+
+  // ── Render ─────────────────────────────────────────────────────────────
   if (!valid.length) {
     return (
       <Box sx={{
@@ -213,55 +402,106 @@ function StreamingPlayer({ chunks }: { chunks: PlaybackChunk[] }) {
     );
   }
 
-  const isLoading = phase === "idle" || (phase === "streaming" && loaded === 0);
+  const isLoading = phase === "idle" || phase === "loading";
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-      <Box sx={{
-        ...card, position: "relative", bgcolor: "#000",
-        borderRadius: 2, overflow: "hidden", aspectRatio: "16/9",
-        display: "flex", alignItems: "center", justifyContent: "center",
-      }}>
-        {isLoading && (
-          <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
-            <CircularProgress size={28} sx={{ color: BLUE }} />
-            <Typography sx={{ color: MUTED, fontSize: 12 }}>Loading first chunk…</Typography>
+      <Box
+        ref={containerRef}
+        sx={{
+          ...card, position: "relative", bgcolor: "#000",
+          borderRadius: 2, overflow: "hidden",
+          display: "flex", flexDirection: "column",
+        }}
+      >
+        {/* Video area */}
+        <Box sx={{
+          position: "relative", aspectRatio: "16/9",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          cursor: phase === "done" ? "pointer" : "default",
+        }}
+          onClick={phase === "done" ? togglePlay : undefined}
+        >
+          {isLoading && (
+            <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+              <CircularProgress size={28} sx={{ color: BLUE }} />
+              <Typography sx={{ color: MUTED, fontSize: 12 }}>
+                Loading recording… {Math.round((loaded / (valid.length || 1)) * 100)}%
+              </Typography>
+            </Box>
+          )}
+          {phase === "error" && (
+            <Box sx={{ textAlign: "center" }}>
+              <VideocamOffIcon sx={{ fontSize: 32, color: MUTED }} />
+              <Typography sx={{ color: MUTED, fontSize: 12, mt: 1 }}>Failed to load recording</Typography>
+            </Box>
+          )}
+          <video
+            ref={videoRef}
+            style={{
+              width: "100%", height: "100%", objectFit: "contain",
+              display: phase === "done" ? "block" : "none",
+            }}
+          />
+        </Box>
+
+        {/* Custom controls */}
+        {phase === "done" && (
+          <Box sx={{ px: 1.5, pb: 1, pt: 0.5 }}>
+            {/* Seek bar */}
+            <Slider
+              size="small"
+              min={0}
+              max={duration || 1}
+              step={0.1}
+              value={currentTime}
+              onChange={handleSeek}
+              onChangeCommitted={handleSeekCommit}
+              sx={{
+                color: BLUE,
+                height: 4,
+                p: 0,
+                mb: 0.5,
+                "& .MuiSlider-thumb": {
+                  width: 12, height: 12,
+                  transition: "0.1s",
+                  "&:hover, &.Mui-focusVisible": { boxShadow: `0 0 0 6px ${BLUE}33` },
+                },
+                "& .MuiSlider-rail": { bgcolor: "rgba(255,255,255,0.15)" },
+              }}
+            />
+
+            {/* Controls row */}
+            <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+              <IconButton size="small" onClick={togglePlay} sx={{ color: TEXT, p: 0.5 }}>
+                {playing ? <PauseIcon sx={{ fontSize: 20 }} /> : <PlayArrowIcon sx={{ fontSize: 20 }} />}
+              </IconButton>
+
+              <IconButton size="small" onClick={toggleMute} sx={{ color: TEXT, p: 0.5 }}>
+                {muted ? <VolumeOffIcon sx={{ fontSize: 18 }} /> : <VolumeUpIcon sx={{ fontSize: 18 }} />}
+              </IconButton>
+
+              <Typography sx={{ color: MUTED, fontSize: 12, ml: 0.5, fontVariantNumeric: "tabular-nums" }}>
+                {fmtDuration(currentTime)} / {fmtDuration(duration)}
+              </Typography>
+
+              <Box sx={{ flex: 1 }} />
+
+              <IconButton size="small" onClick={handleFullscreen} sx={{ color: TEXT, p: 0.5 }}>
+                <FullscreenIcon sx={{ fontSize: 20 }} />
+              </IconButton>
+            </Box>
           </Box>
         )}
-        {phase === "error" && (
-          <Box sx={{ textAlign: "center" }}>
-            <VideocamOffIcon sx={{ fontSize: 32, color: MUTED }} />
-            <Typography sx={{ color: MUTED, fontSize: 12, mt: 1 }}>Failed to load recording</Typography>
-          </Box>
-        )}
-        <video
-          ref={videoRef}
-          controls
-          style={{
-            width: "100%", height: "100%", objectFit: "contain",
-            display: loaded > 0 && phase !== "error" ? "block" : "none",
-          }}
-        />
       </Box>
 
-      {/* Progress bar while streaming remaining chunks */}
-      {phase === "streaming" && loaded > 0 && (
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-          <LinearProgress
-            variant="determinate"
-            value={Math.round((loaded / valid.length) * 100)}
-            sx={{ flex: 1, borderRadius: 1, bgcolor: "rgba(255,255,255,0.08)", "& .MuiLinearProgress-bar": { bgcolor: BLUE } }}
-          />
-          <Typography sx={{ color: DIM, fontSize: 11, flexShrink: 0 }}>
-            {loaded}/{valid.length} chunks
-          </Typography>
-        </Box>
-      )}
-
-      {phase === "done" && (
-        <Typography sx={{ color: DIM, fontSize: 11, textAlign: "right" }}>
-          {valid.length} chunk{valid.length !== 1 ? "s" : ""} · streamed
-        </Typography>
+      {/* Download progress bar */}
+      {phase === "loading" && loaded > 0 && (
+        <LinearProgress
+          variant="determinate"
+          value={Math.round((loaded / (valid.length || 1)) * 100)}
+          sx={{ borderRadius: 1, bgcolor: "rgba(255,255,255,0.08)", "& .MuiLinearProgress-bar": { bgcolor: BLUE } }}
+        />
       )}
     </Box>
   );

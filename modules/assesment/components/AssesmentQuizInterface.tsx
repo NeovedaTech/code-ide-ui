@@ -18,7 +18,9 @@ export default function AssessmentQuizInterface({
 }: {
   section: QuizSection;
 }) {
-  const [currentQuestionId, setCurrentQuestionId] = useState<string>("");
+  const [currentQuestionId, setCurrentQuestionId] = useState<string>(
+    () => section?.questions?.[0]?._id ?? "",
+  );
   // const [questionStatus, setQuestionStatus] = useState<QuestionStatus>({});
   const [flaggedQuestions, setFlaggedQuestions] = useState<Set<string>>(
     new Set(),
@@ -30,9 +32,11 @@ export default function AssessmentQuizInterface({
     setCurrentSectionAnswers: setUserAnswers,
     handleSubmit,
   } = useAnswers();
-  // Initialize with first question's _id
+  // Reset to first question when section changes (e.g. next section)
   useEffect(() => {
-    if (section?.questions?.[0] && !currentQuestionId) {
+    if (!section?.questions?.length) return;
+    const ids = section.questions.map((q) => q._id);
+    if (!ids.includes(currentQuestionId)) {
       setCurrentQuestionId(section.questions[0]._id);
     }
   }, [section, currentQuestionId]);

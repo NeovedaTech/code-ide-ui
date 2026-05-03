@@ -170,7 +170,7 @@ export default function AssessmentCodeInterface({
             position: "relative",
             height: "100%",
             border: "none",
-            boxShadow: "2px 0 8px rgba(0,0,0,0.1)",
+            boxShadow: "1px 0 3px rgba(0,0,0,0.06)",
           },
         }}
       >
@@ -204,12 +204,12 @@ export default function AssessmentCodeInterface({
         <Box
           onMouseDown={handleMouseDownSelectorRight}
           sx={{
-            width: "6px",
+            width: "4px",
             cursor: "col-resize",
-            backgroundColor: isResizingSelectorRight ? "#3b82f6" : "#e5e7eb",
-            transition: "background-color 0.2s",
+            backgroundColor: isResizingSelectorRight ? "#93c5fd" : "transparent",
+            transition: "background-color 0.15s",
             "&:hover": {
-              backgroundColor: "#93c5fd",
+              backgroundColor: "#bfdbfe",
             },
             position: "relative",
             zIndex: 10,
@@ -231,26 +231,26 @@ export default function AssessmentCodeInterface({
           >
             <Box
               sx={{
-                width: "3px",
-                height: "3px",
+                width: "2px",
+                height: "2px",
                 borderRadius: "50%",
-                backgroundColor: isResizingSelectorRight ? "white" : "#9ca3af",
+                backgroundColor: isResizingSelectorRight ? "#3b82f6" : "#cbd5e1",
               }}
             />
             <Box
               sx={{
-                width: "3px",
-                height: "3px",
+                width: "2px",
+                height: "2px",
                 borderRadius: "50%",
-                backgroundColor: isResizingSelectorRight ? "white" : "#9ca3af",
+                backgroundColor: isResizingSelectorRight ? "#3b82f6" : "#cbd5e1",
               }}
             />
             <Box
               sx={{
-                width: "3px",
-                height: "3px",
+                width: "2px",
+                height: "2px",
                 borderRadius: "50%",
-                backgroundColor: isResizingSelectorRight ? "white" : "#9ca3af",
+                backgroundColor: isResizingSelectorRight ? "#3b82f6" : "#cbd5e1",
               }}
             />
           </Box>
@@ -359,12 +359,12 @@ export default function AssessmentCodeInterface({
         <Box
           onMouseDown={handleMouseDownRight}
           sx={{
-            width: "6px",
+            width: "4px",
             cursor: "col-resize",
-            backgroundColor: isResizingRight ? "#3b82f6" : "#e5e7eb",
-            transition: "background-color 0.2s",
+            backgroundColor: isResizingRight ? "#93c5fd" : "transparent",
+            transition: "background-color 0.15s",
             "&:hover": {
-              backgroundColor: "#93c5fd",
+              backgroundColor: "#bfdbfe",
             },
             position: "relative",
             zIndex: 10,
@@ -386,26 +386,26 @@ export default function AssessmentCodeInterface({
           >
             <Box
               sx={{
-                width: "3px",
-                height: "3px",
+                width: "2px",
+                height: "2px",
                 borderRadius: "50%",
-                backgroundColor: isResizingRight ? "white" : "#9ca3af",
+                backgroundColor: isResizingRight ? "#3b82f6" : "#cbd5e1",
               }}
             />
             <Box
               sx={{
-                width: "3px",
-                height: "3px",
+                width: "2px",
+                height: "2px",
                 borderRadius: "50%",
-                backgroundColor: isResizingRight ? "white" : "#9ca3af",
+                backgroundColor: isResizingRight ? "#3b82f6" : "#cbd5e1",
               }}
             />
             <Box
               sx={{
-                width: "3px",
-                height: "3px",
+                width: "2px",
+                height: "2px",
                 borderRadius: "50%",
-                backgroundColor: isResizingRight ? "white" : "#9ca3af",
+                backgroundColor: isResizingRight ? "#3b82f6" : "#cbd5e1",
               }}
             />
           </Box>
@@ -448,7 +448,7 @@ export default function AssessmentCodeInterface({
       )}
       <ConfirmBox
         title="Submit Section"
-        content="You're all problems are submitted ? Do you wish to submit section ?"
+        content="All problems have been submitted. Would you like to submit this section?"
         cancelText="Review Once"
         isOpen={isOpen}
         onClose={() => setIsOpen(false)}
@@ -457,7 +457,7 @@ export default function AssessmentCodeInterface({
       {isSectionDone && (
         <div
           onClick={() => setIsOpen(true)}
-          className="animate-pulse cursor-pointer ease-in-out absolute z-[999] right-5 bottom-5 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg"
+          className="cursor-pointer absolute z-[999] right-5 bottom-5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-4 py-2.5 rounded-lg shadow-lg transition-colors"
         >
           Submit Section
         </div>

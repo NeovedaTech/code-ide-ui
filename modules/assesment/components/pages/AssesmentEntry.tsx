@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   Box,
@@ -31,10 +31,9 @@ import ScreenShareOutlinedIcon from "@mui/icons-material/ScreenShareOutlined";
 
 import { useQueryClient } from "@tanstack/react-query";
 import { useAssessmentInfo } from "@/modules/assesment/hooks/AssesmentApi";
-import { getAssesment } from "@/modules/assesment/hooks/ApiCalls";
+import { getAssesment, startAssessment } from "@/modules/assesment/hooks/ApiCalls";
 import { useAuth } from "@/context/AuthContext";
 import AssesmentAttempt from "@/modules/assesment/components/AssesmentAttempt";
-import DeviceCheck, { AcquiredStreams } from "@/modules/assesment/components/DeviceCheck";
 import { AnswersProvider } from "@/modules/assesment/context/AnswersContext";
 import { AssessmentProvider } from "@/modules/assesment/context/AssesmentContext";
 
@@ -46,6 +45,14 @@ const BG = "#f0f2f5";
 const BORDER = "#dde1e7";
 const TEXT_PRIMARY = "#0a1931";
 const TEXT_SECONDARY = "#566474";
+
+type DeviceStatus = "idle" | "checking" | "ok" | "error";
+type PermissionStatus = "not_required" | DeviceStatus;
+
+export interface AcquiredStreams {
+  camStream: MediaStream | null;
+  screenStream: MediaStream | null;
+}
 
 // ─── Section type icon ─────────────────────────────────────────────────────────
 function SectionIcon({ type }: { type: string }) {
@@ -59,12 +66,17 @@ function SectionIcon({ type }: { type: string }) {
 function RequirementRow({
   icon,
   label,
-  required,
+  status,
+  onRequest,
+  errorHint,
 }: {
   icon: React.ReactNode;
   label: string;
-  required: boolean;
+  status: PermissionStatus;
+  onRequest?: () => void;
+  errorHint?: string;
 }) {
+  const dimmed = status === "not_required";
   return (
     <Box
       sx={{
@@ -72,7 +84,7 @@ function RequirementRow({
         alignItems: "center",
         gap: 1.5,
         py: 1.25,
-        opacity: required ? 1 : 0.4,
+        opacity: dimmed ? 0.4 : 1,
       }}
     >
       <Box
@@ -83,25 +95,53 @@ function RequirementRow({
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          bgcolor: required ? "#e8f0fe" : "#f5f5f5",
-          color: required ? BRAND : TEXT_SECONDARY,
+          bgcolor: dimmed ? "#f5f5f5" : "#e8f0fe",
+          color: dimmed ? TEXT_SECONDARY : BRAND,
           flexShrink: 0,
         }}
       >
         {icon}
       </Box>
-      <Typography
-        variant="body2"
-        sx={{ fontWeight: 500, color: TEXT_PRIMARY, flex: 1 }}
-      >
-        {label}
-      </Typography>
-      {required ? (
-        <CheckCircleIcon sx={{ fontSize: 16, color: "#16a34a" }} />
-      ) : (
+      <Box sx={{ flex: 1, minWidth: 0 }}>
+        <Typography
+          variant="body2"
+          sx={{ fontWeight: 500, color: TEXT_PRIMARY }}
+        >
+          {label}
+        </Typography>
+        {status === "error" && errorHint && (
+          <Typography variant="caption" sx={{ color: "#dc2626", display: "block" }}>
+            {errorHint}
+          </Typography>
+        )}
+      </Box>
+      {status === "not_required" && (
         <Typography variant="caption" sx={{ color: TEXT_SECONDARY }}>
           Not required
         </Typography>
+      )}
+      {(status === "idle" || status === "error") && onRequest && (
+        <Button
+          size="small"
+          variant="text"
+          onClick={onRequest}
+          sx={{
+            fontSize: 11,
+            textTransform: "none",
+            color: status === "error" ? "#dc2626" : BRAND,
+            fontWeight: 600,
+            minWidth: 0,
+            px: 1,
+          }}
+        >
+          {status === "error" ? "Retry" : "Grant"}
+        </Button>
+      )}
+      {status === "checking" && (
+        <CircularProgress size={14} sx={{ color: BRAND }} />
+      )}
+      {status === "ok" && (
+        <CheckCircleIcon sx={{ fontSize: 16, color: "#16a34a" }} />
       )}
     </Box>
   );
@@ -241,7 +281,90 @@ function AssessmentLanding({
   const [showPass, setShowPass] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [err, setErr] = useState("");
-  const [showDeviceCheck, setShowDeviceCheck] = useState(false);
+
+  // Permission states
+  const [camStatus, setCamStatus] = useState<DeviceStatus>("idle");
+  const [micStatus, setMicStatus] = useState<DeviceStatus>("idle");
+  const [screenStatus, setScreenStatus] = useState<DeviceStatus>("idle");
+  const [screenErr, setScreenErr] = useState("");
+
+  // Stream refs
+  const camStreamRef = useRef<MediaStream | null>(null);
+  const screenStreamRef = useRef<MediaStream | null>(null);
+  const passingForwardRef = useRef(false);
+  const hasRequestedCamRef = useRef(false);
+
+  // Request camera + microphone
+  const requestCamMic = useCallback(async () => {
+    if (!info) return;
+    camStreamRef.current?.getTracks().forEach((t) => t.stop());
+    camStreamRef.current = null;
+    if (info.isProctored) setCamStatus("checking");
+    if (info.isAvEnabled) setMicStatus("checking");
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: info.isProctored,
+        audio: info.isAvEnabled,
+      });
+      camStreamRef.current = stream;
+      if (info.isProctored) setCamStatus("ok");
+      if (info.isAvEnabled) setMicStatus("ok");
+    } catch {
+      if (info.isProctored) setCamStatus("error");
+      if (info.isAvEnabled) setMicStatus("error");
+    }
+  }, [info]);
+
+  // Request screen share — entire screen only
+  const requestScreen = useCallback(async () => {
+    screenStreamRef.current?.getTracks().forEach((t) => t.stop());
+    screenStreamRef.current = null;
+    setScreenStatus("checking");
+    setScreenErr("");
+    try {
+      const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+      const track = stream.getVideoTracks()[0];
+      const settings = track.getSettings() as MediaTrackSettings & { displaySurface?: string };
+
+      // Reject anything other than the entire screen
+      if (settings.displaySurface && settings.displaySurface !== "monitor") {
+        stream.getTracks().forEach((t) => t.stop());
+        setScreenStatus("error");
+        setScreenErr("Please share your entire screen, not a window or tab.");
+        return;
+      }
+
+      screenStreamRef.current = stream;
+      track.addEventListener("ended", () => {
+        setScreenStatus("idle");
+        screenStreamRef.current = null;
+      }, { once: true });
+
+      setScreenStatus("ok");
+    } catch {
+      setScreenStatus("error");
+      setScreenErr("Screen sharing was denied or failed.");
+    }
+  }, []);
+
+  // Auto-request camera+mic when assessment info loads
+  useEffect(() => {
+    if (!info || hasRequestedCamRef.current) return;
+    if (info.isProctored || info.isAvEnabled) {
+      hasRequestedCamRef.current = true;
+      requestCamMic();
+    }
+  }, [info, requestCamMic]);
+
+  // Cleanup streams on unmount (unless forwarding to assessment)
+  useEffect(() => {
+    return () => {
+      if (!passingForwardRef.current) {
+        camStreamRef.current?.getTracks().forEach((t) => t.stop());
+        screenStreamRef.current?.getTracks().forEach((t) => t.stop());
+      }
+    };
+  }, []);
 
   if (isLoading) {
     return (
@@ -283,58 +406,56 @@ function AssessmentLanding({
   const totalTime = info.sections.reduce((s, sec) => s + sec.maxTime, 0);
   const totalScore = info.sections.reduce((s, sec) => s + sec.maxScore, 0);
 
-  async function doBegin(streams?: AcquiredStreams) {
+  // Derive permission readiness
+  const camOk = !info.isProctored || camStatus === "ok";
+  const micOk = !info.isAvEnabled || micStatus === "ok";
+  const screenOk = !info.isScreenCapture || screenStatus === "ok";
+  const passOk = !info.passCodeEnabled || passCode.trim().length > 0;
+  const allReady = camOk && micOk && screenOk && passOk;
+
+  // Display statuses for requirement rows
+  const camDisplay: PermissionStatus = info.isProctored ? camStatus : "not_required";
+  const micDisplay: PermissionStatus = info.isAvEnabled ? micStatus : "not_required";
+  const screenDisplay: PermissionStatus = info.isScreenCapture ? screenStatus : "not_required";
+  const passDisplay: PermissionStatus = info.passCodeEnabled ? (passCode.trim() ? "ok" : "idle") : "not_required";
+
+  async function doBegin() {
     try {
+      passingForwardRef.current = true;
       const result = await getAssesment(assessmentId, user!._id, passCode || undefined);
+      const solutionId = result.data._id;
+
+      // Start assessment (sets hasAgreed=true) — skips the instructions page
+      await startAssessment({ solutionId });
+      result.data.hasAgreed = true;
+
       queryClient.setQueryData(["assesment", assessmentId, user!._id], result);
-      onEnter(streams);
+      onEnter({ camStream: camStreamRef.current, screenStream: screenStreamRef.current });
     } catch (e: any) {
-      // Stop streams on failure since we're not proceeding
-      if (streams) {
-        streams.camStream?.getTracks().forEach((t) => t.stop());
-        streams.screenStream?.getTracks().forEach((t) => t.stop());
-      }
+      passingForwardRef.current = false;
+      camStreamRef.current?.getTracks().forEach((t) => t.stop());
+      camStreamRef.current = null;
+      screenStreamRef.current?.getTracks().forEach((t) => t.stop());
+      screenStreamRef.current = null;
       setErr(
         e?.response?.data?.message ??
           e?.message ??
           "Unable to start assessment. Please check your passcode and try again.",
       );
-      setShowDeviceCheck(false);
       setSubmitting(false);
       throw e;
     }
   }
 
   async function handleBegin() {
-    if (!user) return;
+    if (!user || !allReady) return;
     if (info!.passCodeEnabled && !passCode.trim()) {
       setErr("A passcode is required to access this assessment.");
       return;
     }
     setErr("");
-
-    // If any device check is required, show the device check screen
-    if (info!.isProctored || info!.isAvEnabled || info!.isScreenCapture) {
-      setShowDeviceCheck(true);
-      return;
-    }
-
-    // No device checks needed — go straight to backend
     setSubmitting(true);
     await doBegin();
-  }
-
-  // ── Device check screen ─────────────────────────────────────────────────────
-  if (showDeviceCheck) {
-    return (
-      <DeviceCheck
-        isProctored={info.isProctored}
-        isAvEnabled={info.isAvEnabled}
-        isScreenCapture={info.isScreenCapture}
-        onComplete={doBegin}
-        onBack={() => { setShowDeviceCheck(false); setErr(""); }}
-      />
-    );
   }
 
   const rules = [
@@ -503,25 +624,31 @@ function AssessmentLanding({
               <RequirementRow
                 icon={<VideocamOutlinedIcon sx={{ fontSize: 16 }} />}
                 label="Camera access"
-                required={info.isProctored}
+                status={camDisplay}
+                onRequest={requestCamMic}
+                errorHint="Camera unavailable — check browser permissions"
               />
               <Divider sx={{ borderColor: BORDER }} />
               <RequirementRow
                 icon={<MicNoneOutlinedIcon sx={{ fontSize: 16 }} />}
                 label="Microphone access"
-                required={info.isAvEnabled}
+                status={micDisplay}
+                onRequest={requestCamMic}
+                errorHint="Microphone unavailable — check browser permissions"
               />
               <Divider sx={{ borderColor: BORDER }} />
               <RequirementRow
                 icon={<ScreenShareOutlinedIcon sx={{ fontSize: 16 }} />}
                 label="Screen sharing"
-                required={info.isScreenCapture}
+                status={screenDisplay}
+                onRequest={requestScreen}
+                errorHint={screenErr || "Screen sharing failed — try again"}
               />
               <Divider sx={{ borderColor: BORDER }} />
               <RequirementRow
                 icon={<LockOutlinedIcon sx={{ fontSize: 16 }} />}
                 label="Passcode"
-                required={info.passCodeEnabled}
+                status={passDisplay}
               />
             </Box>
           </Paper>
@@ -599,7 +726,7 @@ function AssessmentLanding({
               variant="contained"
               fullWidth
               size="large"
-              disabled={submitting}
+              disabled={!allReady || submitting}
               onClick={handleBegin}
               sx={{
                 bgcolor: BRAND,

@@ -4,7 +4,6 @@ import { post, get } from "@/helpers/api";
 import { PROCTORING_ROUTES } from "@/constants/ApiRoutes";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
-const TOKEN_KEY = "knovia_token";
 
 // Save chunks every 10 seconds — worst-case data loss is ≤10 s.
 const CHUNK_INTERVAL_MS = 10_000;
@@ -25,16 +24,24 @@ async function getDB(): Promise<IDBDatabase> {
 async function idbStore(solutionId: string, chunkIndex: number, blob: Blob) {
   try {
     const db = await getDB();
-    const tx = db.transaction(IDB_STORE, "readwrite");
-    tx.objectStore(IDB_STORE).put(blob, `${solutionId}_chunk_${chunkIndex}`);
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(IDB_STORE, "readwrite");
+      tx.objectStore(IDB_STORE).put(blob, `${solutionId}_chunk_${chunkIndex}`);
+      tx.oncomplete = () => resolve();
+      tx.onerror    = () => reject(tx.error);
+    });
   } catch { /* silent */ }
 }
 
 async function idbRemove(solutionId: string, chunkIndex: number) {
   try {
     const db = await getDB();
-    const tx = db.transaction(IDB_STORE, "readwrite");
-    tx.objectStore(IDB_STORE).delete(`${solutionId}_chunk_${chunkIndex}`);
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(IDB_STORE, "readwrite");
+      tx.objectStore(IDB_STORE).delete(`${solutionId}_chunk_${chunkIndex}`);
+      tx.oncomplete = () => resolve();
+      tx.onerror    = () => reject(tx.error);
+    });
   } catch { /* silent */ }
 }
 
@@ -65,7 +72,6 @@ async function idbGetPending(solutionId: string): Promise<{ chunkIndex: number; 
 }
 
 // ─── Face detection ────────────────────────────────────────────────────────────
-// Loaded lazily — only when camera is active. Model is cached after first load.
 let detectorPromise: Promise<import("@tensorflow-models/blazeface").BlazeFaceModel> | null = null;
 
 async function getFaceDetector() {
@@ -85,19 +91,13 @@ async function getFaceDetector() {
   return detectorPromise;
 }
 
-/**
- * Attaches face-detection to a camera stream.
- * Runs every DETECT_INTERVAL_MS; logs a violation after CONSECUTIVE_THRESHOLD
- * consecutive bad frames to avoid noise from brief look-aways.
- * Returns a cleanup function.
- */
 async function startFaceDetection(
   stream: MediaStream,
   onViolation: (type: "no_face" | "multiple_faces", detail: string) => void,
   activeRef: React.MutableRefObject<boolean>,
 ): Promise<() => void> {
   const DETECT_INTERVAL_MS    = 3_000;
-  const CONSECUTIVE_THRESHOLD = 2; // must fire N times in a row before logging
+  const CONSECUTIVE_THRESHOLD = 2;
 
   let detector: import("@tensorflow-models/blazeface").BlazeFaceModel;
   try {
@@ -107,7 +107,6 @@ async function startFaceDetection(
     return () => {};
   }
 
-  // Off-screen video element fed from the camera stream
   const video = document.createElement("video");
   video.srcObject = stream;
   video.muted     = true;
@@ -120,7 +119,7 @@ async function startFaceDetection(
   const interval = setInterval(async () => {
     if (!activeRef.current || video.readyState < 2) return;
     try {
-      const faces = await detector.estimateFaces(video, false /* returnTensors */);
+      const faces = await detector.estimateFaces(video, false);
 
       if (faces.length === 0) {
         noFaceStreak++;
@@ -172,28 +171,28 @@ export function useAVProctoring({
   initialScreenStream?: MediaStream | null;
 }) {
   // ── Camera / mic refs ─────────────────────────────────────────────────────
-  const mediaRecorderRef    = useRef<MediaRecorder | null>(null);
-  const streamRef           = useRef<MediaStream | null>(null);
-  const chunkIndexRef       = useRef(0);
-  const completedRef        = useRef<{ chunkIndex: number; s3Key: string }[]>([]);
-  const initSegmentRef      = useRef<Blob | null>(null);
+  const mediaRecorderRef     = useRef<MediaRecorder | null>(null);
+  const streamRef            = useRef<MediaStream | null>(null);
+  const chunkIndexRef        = useRef(0);
+  const completedRef         = useRef<{ chunkIndex: number; s3Key: string }[]>([]);
   const faceDetectCleanupRef = useRef<(() => void) | null>(null);
 
   // ── Screen refs ───────────────────────────────────────────────────────────
-  const screenRecorderRef    = useRef<MediaRecorder | null>(null);
-  const screenStreamRef      = useRef<MediaStream | null>(null);
-  const screenChunkIndexRef  = useRef(0);
-  const screenCompletedRef   = useRef<{ chunkIndex: number; s3Key: string }[]>([]);
-  const screenInitSegmentRef = useRef<Blob | null>(null);
+  const screenRecorderRef   = useRef<MediaRecorder | null>(null);
+  const screenStreamRef     = useRef<MediaStream | null>(null);
+  const screenChunkIndexRef = useRef(0);
+  const screenCompletedRef  = useRef<{ chunkIndex: number; s3Key: string }[]>([]);
 
-  const activeRef      = useRef(false);
-  const isUnloadingRef = useRef(false);
+  const camActiveRef      = useRef(false);
+  const screenActiveRef   = useRef(false);
+  const isUnloadingRef    = useRef(false);
+  const pendingUploadsRef = useRef<Set<Promise<void>>>(new Set());
 
-  // Consume pre-acquired streams from DeviceCheck (used once, then cleared)
+  // Pre-acquired streams from the landing page (consumed once)
   const initialCamRef    = useRef(initialCamStream ?? null);
   const initialScreenRef = useRef(initialScreenStream ?? null);
 
-  // Stable refs so callbacks don't cause effect re-runs
+  // Stable refs for callbacks
   const onCameraLostRef = useRef(onCameraLost);
   onCameraLostRef.current = onCameraLost;
   const onScreenLostRef = useRef(onScreenLost);
@@ -232,7 +231,9 @@ export function useAVProctoring({
   const uploadChunk = useCallback(
     (blob: Blob) => {
       const idx = chunkIndexRef.current++;
-      return uploadChunkAt(blob, idx);
+      const p = uploadChunkAt(blob, idx).finally(() => pendingUploadsRef.current.delete(p));
+      pendingUploadsRef.current.add(p);
+      return p;
     },
     [uploadChunkAt],
   );
@@ -240,15 +241,9 @@ export function useAVProctoring({
   const beaconChunk = useCallback(
     (blob: Blob) => {
       if (!blob.size) return;
-      const idx   = chunkIndexRef.current++;
-      const token = typeof window !== "undefined"
-        ? (localStorage.getItem(TOKEN_KEY) ?? "")
-        : "";
+      const idx = chunkIndexRef.current++;
       const params = new URLSearchParams({
-        solutionId,
-        assessmentId,
-        chunkIndex: String(idx),
-        t: token,
+        solutionId, assessmentId, chunkIndex: String(idx),
       });
       navigator.sendBeacon(
         `${API_BASE}/api/v1/proctoring/relay-chunk?${params}`,
@@ -280,6 +275,7 @@ export function useAVProctoring({
         } catch {
           attempts++;
           if (attempts < 3) await new Promise((r) => setTimeout(r, 1000 * 2 ** attempts));
+          else await idbStore(solutionId, idx, blob);
         }
       }
     },
@@ -289,7 +285,9 @@ export function useAVProctoring({
   const uploadScreenChunk = useCallback(
     (blob: Blob) => {
       const idx = screenChunkIndexRef.current++;
-      return uploadScreenChunkAt(blob, idx);
+      const p = uploadScreenChunkAt(blob, idx).finally(() => pendingUploadsRef.current.delete(p));
+      pendingUploadsRef.current.add(p);
+      return p;
     },
     [uploadScreenChunkAt],
   );
@@ -297,16 +295,9 @@ export function useAVProctoring({
   const beaconScreenChunk = useCallback(
     (blob: Blob) => {
       if (!blob.size) return;
-      const idx   = screenChunkIndexRef.current++;
-      const token = typeof window !== "undefined"
-        ? (localStorage.getItem(TOKEN_KEY) ?? "")
-        : "";
+      const idx = screenChunkIndexRef.current++;
       const params = new URLSearchParams({
-        solutionId,
-        assessmentId,
-        chunkIndex: String(idx),
-        recordingType: "screen",
-        t: token,
+        solutionId, assessmentId, chunkIndex: String(idx), recordingType: "screen",
       });
       navigator.sendBeacon(
         `${API_BASE}/api/v1/proctoring/relay-chunk?${params}`,
@@ -317,12 +308,22 @@ export function useAVProctoring({
   );
 
   // ── Main effect: camera/mic MediaRecorder ─────────────────────────────────
+  //
+  // Simplified recording: each ondataavailable blob is uploaded as-is.
+  // Chunk 0 (first timeslice) naturally contains the WebM header + first cluster.
+  // Chunks 1+ contain only cluster data. No init-segment prepending needed.
+  //
   useEffect(() => {
     if (!solutionId || !assessmentId || (!isProctored && !isAvEnabled)) return;
 
-    activeRef.current      = true;
+    // Guard: if a recorder is already running (React StrictMode re-invoke), skip.
+    if (mediaRecorderRef.current?.state === "recording") {
+      camActiveRef.current = true;
+      return;
+    }
+
+    camActiveRef.current   = true;
     isUnloadingRef.current = false;
-    let recorder: MediaRecorder | null = null;
 
     (async () => {
       // Reconnect: resume chunk index from last known state
@@ -331,11 +332,16 @@ export function useAVProctoring({
           recordingStatus: string;
           lastKnownChunkIndex: number;
           sessionCount: number;
+          screenRecordingStatus: string;
+          screenLastKnownChunkIndex: number;
         }>(PROCTORING_ROUTES.SESSION(solutionId));
 
         if (session.recordingStatus === "completed") return;
         if (session.lastKnownChunkIndex >= 0) {
           chunkIndexRef.current = session.lastKnownChunkIndex + 1;
+        }
+        if (session.screenLastKnownChunkIndex >= 0) {
+          screenChunkIndexRef.current = session.screenLastKnownChunkIndex + 1;
         }
         if (session.recordingStatus === "interrupted") {
           await post(PROCTORING_ROUTES.LOG, {
@@ -350,14 +356,17 @@ export function useAVProctoring({
       } catch { /* first session */ }
 
       try {
-        // Reuse pre-acquired stream from DeviceCheck if available
+        // Reuse pre-acquired stream if still alive
         const preAcquired = initialCamRef.current;
-        initialCamRef.current = null; // consume once
-        const stream = preAcquired || await navigator.mediaDevices.getUserMedia({
+        initialCamRef.current = null;
+        const alive = preAcquired?.active ? preAcquired
+                    : streamRef.current?.active ? streamRef.current
+                    : null;
+        const stream = alive || await navigator.mediaDevices.getUserMedia({
           video: isProctored,
           audio: isAvEnabled,
         });
-        if (!activeRef.current) { stream.getTracks().forEach((t) => t.stop()); return; }
+        if (!camActiveRef.current) { stream.getTracks().forEach((t) => t.stop()); return; }
         streamRef.current = stream;
 
         // Detect camera turned off mid-assessment
@@ -373,47 +382,41 @@ export function useAVProctoring({
           ? "video/webm;codecs=vp8,opus"
           : "video/webm";
 
-        recorder = new MediaRecorder(stream, { mimeType });
+        const recorder = new MediaRecorder(stream, { mimeType });
         mediaRecorderRef.current = recorder;
 
+        // Upload each chunk directly — no init-segment manipulation
         recorder.ondataavailable = (e) => {
-          if (!e.data.size || !activeRef.current) return;
-
-          if (!initSegmentRef.current) {
-            initSegmentRef.current = e.data;
-            return;
-          }
-
-          const blob = new Blob([initSegmentRef.current, e.data], { type: "video/webm" });
-
+          if (!e.data.size || !camActiveRef.current) return;
           if (isUnloadingRef.current) {
-            beaconChunk(blob);
+            beaconChunk(e.data);
           } else {
-            uploadChunk(blob).catch(console.error);
+            uploadChunk(e.data).catch(console.error);
           }
         };
 
         recorder.start(CHUNK_INTERVAL_MS);
-        setTimeout(() => recorder?.requestData(), 0);
 
-        // Face detection — only when camera is on (isProctored)
+        // Face detection
         if (isProctored && onFaceViolation) {
-          startFaceDetection(stream, onFaceViolation, activeRef).then((cleanup) => {
+          startFaceDetection(stream, onFaceViolation, camActiveRef).then((cleanup) => {
             faceDetectCleanupRef.current = cleanup;
           });
         }
       } catch (e) {
         console.warn("[AV] getUserMedia failed:", e);
+        // Notify parent so the re-permission modal appears
+        onCameraLostRef.current?.();
       }
     })();
 
     return () => {
-      activeRef.current      = false;
-      initSegmentRef.current = null;
       faceDetectCleanupRef.current?.();
       faceDetectCleanupRef.current = null;
-      if (recorder?.state === "recording") recorder.stop();
-      streamRef.current?.getTracks().forEach((t) => t.stop());
+      // Stop via ref so cleanup works even after StrictMode re-run
+      if (mediaRecorderRef.current?.state === "recording") {
+        mediaRecorderRef.current.stop();
+      }
     };
   }, [solutionId, assessmentId, isProctored, isAvEnabled, uploadChunk, beaconChunk, onFaceViolation]);
 
@@ -421,23 +424,30 @@ export function useAVProctoring({
   useEffect(() => {
     if (!solutionId || !assessmentId || !isScreenCapture) return;
 
-    activeRef.current      = true;
-    isUnloadingRef.current = false;
-    let recorder: MediaRecorder | null = null;
+    // Guard: skip if already recording (StrictMode re-invoke)
+    if (screenRecorderRef.current?.state === "recording") {
+      screenActiveRef.current = true;
+      return;
+    }
+
+    screenActiveRef.current = true;
+    // NOTE: do NOT reset isUnloadingRef here — it is shared with the camera
+    // effect and the beforeunload handler. Resetting here would race.
 
     (async () => {
       try {
-        // Reuse pre-acquired stream from DeviceCheck if available
         const preAcquired = initialScreenRef.current;
-        initialScreenRef.current = null; // consume once
-        const stream = preAcquired || await navigator.mediaDevices.getDisplayMedia({
+        initialScreenRef.current = null;
+        const alive = preAcquired?.active ? preAcquired
+                    : screenStreamRef.current?.active ? screenStreamRef.current
+                    : null;
+        const stream = alive || await navigator.mediaDevices.getDisplayMedia({
           video: true,
           audio: false,
         });
-        if (!activeRef.current) { stream.getTracks().forEach((t) => t.stop()); return; }
+        if (!screenActiveRef.current) { stream.getTracks().forEach((t) => t.stop()); return; }
         screenStreamRef.current = stream;
 
-        // When the user clicks the browser's "Stop sharing" button
         stream.getVideoTracks()[0].addEventListener("ended", () => {
           if (screenRecorderRef.current?.state === "recording") screenRecorderRef.current.stop();
           onScreenLostRef.current?.();
@@ -447,37 +457,31 @@ export function useAVProctoring({
           ? "video/webm;codecs=vp8"
           : "video/webm";
 
-        recorder = new MediaRecorder(stream, { mimeType });
+        const recorder = new MediaRecorder(stream, { mimeType });
         screenRecorderRef.current = recorder;
 
+        // Upload each chunk directly
         recorder.ondataavailable = (e) => {
-          if (!e.data.size || !activeRef.current) return;
-
-          if (!screenInitSegmentRef.current) {
-            screenInitSegmentRef.current = e.data;
-            return;
-          }
-
-          const blob = new Blob([screenInitSegmentRef.current, e.data], { type: "video/webm" });
-
+          if (!e.data.size || !screenActiveRef.current) return;
           if (isUnloadingRef.current) {
-            beaconScreenChunk(blob);
+            beaconScreenChunk(e.data);
           } else {
-            uploadScreenChunk(blob).catch(console.error);
+            uploadScreenChunk(e.data).catch(console.error);
           }
         };
 
         recorder.start(CHUNK_INTERVAL_MS);
-        setTimeout(() => recorder?.requestData(), 0);
       } catch (e) {
         console.warn("[Screen] getDisplayMedia failed:", e);
+        // Notify parent so the re-permission modal appears
+        onScreenLostRef.current?.();
       }
     })();
 
     return () => {
-      screenInitSegmentRef.current = null;
-      if (recorder?.state === "recording") recorder.stop();
-      screenStreamRef.current?.getTracks().forEach((t) => t.stop());
+      if (screenRecorderRef.current?.state === "recording") {
+        screenRecorderRef.current.stop();
+      }
     };
   }, [solutionId, assessmentId, isScreenCapture, uploadScreenChunk, beaconScreenChunk]);
 
@@ -487,11 +491,15 @@ export function useAVProctoring({
     const handleUnload = () => {
       isUnloadingRef.current = true;
 
+      // Flush partial chunk then stop — prevents a second ondataavailable
+      // from the next timeslice firing after the page is unloading.
       if (mediaRecorderRef.current?.state === "recording") {
         mediaRecorderRef.current.requestData();
+        mediaRecorderRef.current.stop();
       }
       if (screenRecorderRef.current?.state === "recording") {
         screenRecorderRef.current.requestData();
+        screenRecorderRef.current.stop();
       }
 
       navigator.sendBeacon(
@@ -528,7 +536,6 @@ export function useAVProctoring({
     faceDetectCleanupRef.current = null;
     if (mediaRecorderRef.current?.state === "recording") mediaRecorderRef.current.stop();
     streamRef.current?.getTracks().forEach((t) => t.stop());
-    initSegmentRef.current = null;
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -536,7 +543,7 @@ export function useAVProctoring({
         audio: isAvEnabled,
       });
       streamRef.current = stream;
-      activeRef.current = true;
+      camActiveRef.current = true;
 
       stream.getVideoTracks().forEach((track) => {
         track.addEventListener("ended", () => {
@@ -553,18 +560,15 @@ export function useAVProctoring({
       mediaRecorderRef.current = recorder;
 
       recorder.ondataavailable = (e) => {
-        if (!e.data.size || !activeRef.current) return;
-        if (!initSegmentRef.current) { initSegmentRef.current = e.data; return; }
-        const blob = new Blob([initSegmentRef.current, e.data], { type: "video/webm" });
-        if (isUnloadingRef.current) beaconChunk(blob);
-        else uploadChunk(blob).catch(console.error);
+        if (!e.data.size || !camActiveRef.current) return;
+        if (isUnloadingRef.current) beaconChunk(e.data);
+        else uploadChunk(e.data).catch(console.error);
       };
 
       recorder.start(CHUNK_INTERVAL_MS);
-      setTimeout(() => recorder.requestData(), 0);
 
       if (isProctored && onFaceViolation) {
-        startFaceDetection(stream, onFaceViolation, activeRef).then((cleanup) => {
+        startFaceDetection(stream, onFaceViolation, camActiveRef).then((cleanup) => {
           faceDetectCleanupRef.current = cleanup;
         });
       }
@@ -578,7 +582,6 @@ export function useAVProctoring({
   const restartScreen = useCallback(async (): Promise<boolean> => {
     if (screenRecorderRef.current?.state === "recording") screenRecorderRef.current.stop();
     screenStreamRef.current?.getTracks().forEach((t) => t.stop());
-    screenInitSegmentRef.current = null;
 
     try {
       const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
@@ -596,15 +599,12 @@ export function useAVProctoring({
       screenRecorderRef.current = recorder;
 
       recorder.ondataavailable = (e) => {
-        if (!e.data.size || !activeRef.current) return;
-        if (!screenInitSegmentRef.current) { screenInitSegmentRef.current = e.data; return; }
-        const blob = new Blob([screenInitSegmentRef.current, e.data], { type: "video/webm" });
-        if (isUnloadingRef.current) beaconScreenChunk(blob);
-        else uploadScreenChunk(blob).catch(console.error);
+        if (!e.data.size || !screenActiveRef.current) return;
+        if (isUnloadingRef.current) beaconScreenChunk(e.data);
+        else uploadScreenChunk(e.data).catch(console.error);
       };
 
       recorder.start(CHUNK_INTERVAL_MS);
-      setTimeout(() => recorder.requestData(), 0);
       return true;
     } catch {
       return false;
@@ -613,9 +613,8 @@ export function useAVProctoring({
 
   // ── completeRecording: called on submit ───────────────────────────────────
   const completeRecording = useCallback(async () => {
-    activeRef.current = false;
-
-    // Stop both recorders and wait for final chunks
+    // Keep active refs TRUE while stopping — so the final ondataavailable
+    // chunk (fired by recorder.stop()) is still captured and uploaded.
     const stopRecorder = (rec: MediaRecorder | null) =>
       rec?.state === "recording"
         ? new Promise<void>((resolve) => {
@@ -629,6 +628,13 @@ export function useAVProctoring({
       stopRecorder(screenRecorderRef.current),
     ]);
 
+    // Now disable — recorders are stopped, no more ondataavailable events
+    camActiveRef.current    = false;
+    screenActiveRef.current = false;
+
+    // Await all in-flight chunk uploads (including the final chunk from stop())
+    await Promise.all([...pendingUploadsRef.current]).catch(() => {});
+
     streamRef.current?.getTracks().forEach((t) => t.stop());
     screenStreamRef.current?.getTracks().forEach((t) => t.stop());
 
@@ -640,9 +646,8 @@ export function useAVProctoring({
       payload.screenChunks = screenCompletedRef.current;
     }
 
-    if (completedRef.current.length > 0 || screenCompletedRef.current.length > 0) {
-      await post(PROCTORING_ROUTES.COMPLETE, payload).catch(console.error);
-    }
+    // Always call COMPLETE so recordingStatus is set to "completed" in the DB
+    await post(PROCTORING_ROUTES.COMPLETE, payload).catch(console.error);
   }, [solutionId]);
 
   return { completeRecording, restartCamera, restartScreen };

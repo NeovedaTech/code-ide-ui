@@ -194,10 +194,8 @@ export default function Entry() {
 
   const fetchCompleted = useCallback(async (userId: string) => {
     try {
-      const token = typeof window !== "undefined" ? localStorage.getItem("knovia_token") : null;
       const res = await fetch(USER_ROUTES.COMPLETED_ASSESSMENTS(userId), {
         credentials: "include",
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       const data = await res.json();
       if (data.success) {

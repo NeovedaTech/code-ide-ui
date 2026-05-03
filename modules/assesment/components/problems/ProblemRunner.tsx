@@ -1,10 +1,9 @@
- 
+
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { CodingProblem } from "@/types/assessment";
 import type { Monaco } from "@monaco-editor/react";
 import { MonacoEditor } from "./MonacoEditor";
-import { Keyboard, RocketIcon, SaveIcon } from "lucide-react";
 import Code from "@mui/icons-material/Code";
 import KeyboardArrowDown from "@mui/icons-material/KeyboardArrowDown";
 import Check from "@mui/icons-material/Check";
@@ -14,10 +13,13 @@ import RestartAlt from "@mui/icons-material/RestartAlt";
 import NavigateBeforeRounded from "@mui/icons-material/NavigateBeforeRounded";
 import NavigateNextRounded from "@mui/icons-material/NavigateNextRounded";
 import CheckCircleOutline from "@mui/icons-material/CheckCircleOutline";
+import PlayArrowRounded from "@mui/icons-material/PlayArrowRounded";
+import PublishRounded from "@mui/icons-material/PublishRounded";
 import { useAnswers } from "@/modules/assesment/context/AnswersContext";
-import { Button, IconButton, Tooltip } from "@mui/material";
+import { IconButton, Tooltip } from "@mui/material";
 import { Sync } from "@mui/icons-material";
 import { useAssessment } from "@/modules/assesment/context/AssesmentContext";
+
 const generateStorageKey = (
   problemId: string,
   problemTitle: string,
@@ -107,7 +109,6 @@ export default function ProblemEditor({
   const { solutionId } = useAssessment();
   const { startExecution, isCodeRunning, isCodeSubmitting, startCodeSubmission } = useAnswers();
 
-  // Track when a submission just completed to show success banner
   const [showSubmitSuccess, setShowSubmitSuccess] = useState(false);
   const wasSubmittingRef = useRef(false);
   useEffect(() => {
@@ -119,7 +120,6 @@ export default function ProblemEditor({
     }
   }, [isCodeSubmitting, isSubmitted]);
 
-  // Dismiss success banner when switching problems
   useEffect(() => {
     setShowSubmitSuccess(false);
   }, [problem._id]);
@@ -214,51 +214,79 @@ export default function ProblemEditor({
     setIsSaved(false);
   };
 
-  const handleSaveManually = () => {
-    saveCode(problem._id, problem.title, selectedLanguage, code);
-    setIsSaved(true);
-  };
-
   return (
-    <div className="flex flex-col h-full bg-white overflow-hidden border-l border-gray-200">
+    <div className="flex flex-col h-full bg-[#fafbfc] overflow-hidden">
       {/* ── Problem navigation bar ── */}
-      <div className="flex items-center justify-between px-4 py-1.5 bg-white border-b border-gray-200">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between px-4 py-2 bg-white border-b border-gray-200">
+        <div className="flex items-center gap-1.5">
           <Tooltip title="Previous problem">
             <span>
-              <IconButton size="small" disabled={!hasPrev} onClick={onPrev} sx={{ p: 0.5 }}>
-                <NavigateBeforeRounded sx={{ fontSize: 20 }} />
+              <IconButton
+                size="small"
+                disabled={!hasPrev}
+                onClick={onPrev}
+                sx={{
+                  p: 0.5,
+                  color: "#64748b",
+                  "&:hover": { bgcolor: "#f1f5f9" },
+                  "&.Mui-disabled": { color: "#cbd5e1" },
+                }}
+              >
+                <NavigateBeforeRounded sx={{ fontSize: 18 }} />
               </IconButton>
             </span>
           </Tooltip>
-          <span className="text-xs font-semibold text-gray-700 select-none">
+          <span className="text-xs font-semibold text-slate-600 select-none tabular-nums">
             Problem {problemIndex + 1} of {totalProblems}
           </span>
           <Tooltip title="Next problem">
             <span>
-              <IconButton size="small" disabled={!hasNext} onClick={onNext} sx={{ p: 0.5 }}>
-                <NavigateNextRounded sx={{ fontSize: 20 }} />
+              <IconButton
+                size="small"
+                disabled={!hasNext}
+                onClick={onNext}
+                sx={{
+                  p: 0.5,
+                  color: "#64748b",
+                  "&:hover": { bgcolor: "#f1f5f9" },
+                  "&.Mui-disabled": { color: "#cbd5e1" },
+                }}
+              >
+                <NavigateNextRounded sx={{ fontSize: 18 }} />
               </IconButton>
             </span>
           </Tooltip>
           {isSubmitted && (
-            <span className="inline-flex items-center gap-1 ml-1 px-2 py-0.5 text-[11px] font-semibold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-              <CheckCircleOutline sx={{ fontSize: 13 }} />
+            <span className="inline-flex items-center gap-1 ml-2 px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 uppercase tracking-wide">
+              <CheckCircleOutline sx={{ fontSize: 12 }} />
               Submitted
             </span>
           )}
         </div>
-        <span className="text-[11px] font-medium text-gray-400">
-          {submittedCount}/{totalProblems} submitted
-        </span>
+        <div className="flex items-center gap-3">
+          <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+            {submittedCount}/{totalProblems} submitted
+          </span>
+          {/* Save indicator */}
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-50 border border-slate-200">
+            {isSaved ? (
+              <CloudDone sx={{ fontSize: 14, color: "#16a34a" }} />
+            ) : (
+              <CloudUpload sx={{ fontSize: 14, color: "#d97706" }} className="animate-pulse" />
+            )}
+            <span className="text-[10px] font-semibold text-slate-500">
+              {isSaved ? "Saved" : "Saving..."}
+            </span>
+          </div>
+        </div>
       </div>
 
       {/* ── Success banner after submission ── */}
       {showSubmitSuccess && !isCodeSubmitting && (
-        <div className="flex items-center justify-between px-4 py-2.5 bg-emerald-50 border-b border-emerald-200">
+        <div className="flex items-center justify-between px-4 py-2 bg-emerald-50 border-b border-emerald-200">
           <div className="flex items-center gap-2">
-            <CheckCircleOutline sx={{ fontSize: 18, color: "#16a34a" }} />
-            <span className="text-sm font-semibold text-emerald-800">
+            <CheckCircleOutline sx={{ fontSize: 16, color: "#16a34a" }} />
+            <span className="text-xs font-semibold text-emerald-800">
               Problem submitted successfully!
             </span>
           </div>
@@ -266,14 +294,14 @@ export default function ProblemEditor({
             {hasNext && (
               <button
                 onClick={() => { setShowSubmitSuccess(false); onNextUnsubmitted?.(); }}
-                className="px-3 py-1 text-xs font-semibold rounded-md bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
+                className="px-3 py-1 text-[11px] font-semibold rounded bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
               >
                 Next Problem
               </button>
             )}
             <button
               onClick={() => setShowSubmitSuccess(false)}
-              className="px-2 py-1 text-xs font-medium rounded-md text-gray-500 hover:bg-gray-100 transition-colors"
+              className="px-2 py-1 text-[11px] font-medium rounded text-slate-500 hover:bg-slate-100 transition-colors"
             >
               Dismiss
             </button>
@@ -281,153 +309,106 @@ export default function ProblemEditor({
         </div>
       )}
 
-      <div className="flex items-center justify-between px-6 py-3 bg-gray-50 border-gray-200">
+      {/* ── Editor Toolbar ── */}
+      <div className="flex items-center justify-between px-4 py-2 bg-white border-b border-gray-200">
+        {/* Language selector */}
         <div className="relative" ref={dropdownRef}>
           <button
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-            className="flex items-center gap-3 px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-semibold text-gray-900 hover:bg-gray-50 hover:border-gray-400 transition-all min-w-[160px] shadow-sm"
+            className="flex items-center gap-2.5 pl-3 pr-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-md text-xs font-semibold text-slate-700 hover:bg-slate-100 hover:border-slate-300 transition-all min-w-[140px]"
           >
-            <Code className="text-gray-600" sx={{ fontSize: 18 }} />
+            <Code sx={{ fontSize: 15, color: "#64748b" }} />
             <span className="flex-1 text-left">
-              {selectedLanguage.charAt(0).toUpperCase() +
-                selectedLanguage.slice(1)}
+              {selectedLanguage.charAt(0).toUpperCase() + selectedLanguage.slice(1)}
             </span>
             <KeyboardArrowDown
-              className={`text-gray-500 transition-transform ${
-                isDropdownOpen ? "rotate-180" : ""
-              }`}
-              sx={{ fontSize: 18 }}
+              sx={{
+                fontSize: 16,
+                color: "#94a3b8",
+                transition: "transform 0.2s",
+                transform: isDropdownOpen ? "rotate(180deg)" : "rotate(0deg)",
+              }}
             />
           </button>
 
-          {/* Dropdown Menu */}
           {isDropdownOpen && (
-            <div className="absolute top-full left-0 mt-2 w-full bg-white border border-gray-200 rounded-lg shadow-lg z-50 overflow-hidden">
-              <div className="py-1">
-                {problem.languagesSupported?.map((lang) => (
-                  <button
-                    key={lang}
-                    onClick={() => handleLanguageChange(lang)}
-                    className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
-                      selectedLanguage === lang
-                        ? "bg-blue-50 text-blue-700 font-semibold"
-                        : "text-gray-700 hover:bg-gray-50"
-                    }`}
-                  >
-                    <span className="flex-1 text-left">
-                      {lang.charAt(0).toUpperCase() + lang.slice(1)}
-                    </span>
-                    {selectedLanguage === lang && (
-                      <Check className="text-blue-600" sx={{ fontSize: 16 }} />
-                    )}
-                  </button>
-                ))}
-              </div>
+            <div className="absolute top-full left-0 mt-1 w-full bg-white border border-slate-200 rounded-md shadow-lg z-50 overflow-hidden">
+              {problem.languagesSupported?.map((lang) => (
+                <button
+                  key={lang}
+                  onClick={() => handleLanguageChange(lang)}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs transition-colors ${
+                    selectedLanguage === lang
+                      ? "bg-blue-50 text-blue-700 font-semibold"
+                      : "text-slate-600 hover:bg-slate-50"
+                  }`}
+                >
+                  <span className="flex-1 text-left">
+                    {lang.charAt(0).toUpperCase() + lang.slice(1)}
+                  </span>
+                  {selectedLanguage === lang && (
+                    <Check sx={{ fontSize: 14, color: "#2563eb" }} />
+                  )}
+                </button>
+              ))}
             </div>
           )}
         </div>
 
-        <div className="flex items-center gap-3">
-          <Button
-            endIcon={
-              isCodeRunning ? (
-                <Sync
-                  sx={{ fontSize: 20, animation: "spin 1s linear infinite" }}
-                  className="animate-spin duration-150 ease-linear"
-                />
-              ) : null
-            }
-            onClick={handleRun}
-            variant="contained"
-            disabled={isCodeRunning}
-            sx={{
-              textTransform: "none",
-              fontSize: 14,
-              fontWeight: 500,
-              borderRadius: "5px",
-              background: "#16a349",
-              color: "white",
-              "&:hover": {
-                backgroundColor: "#16a349",
-              },
-              "&:disabled": {
-                color: "white",
-                cursor: "not-allowed",
-              },
-            }}
-          >
-            Run
-          </Button>
-          <Button
-            onClick={handleSubmit}
-            disabled={isCodeSubmitting}
-            endIcon={
-              isCodeSubmitting ? (
-                <Sync
-                  sx={{ fontSize: 20, animation: "spin 1s linear infinite" }}
-                  className="animate-spin duration-150 ease-linear"
-                />
-              ) : null
-            }
-            variant="contained"
-            sx={{
-              textTransform: "none",
-              fontSize: 14,
-              fontWeight: 500,
-              borderRadius: "5px",
-              background: "#16a349",
-              color: "white",
-              "&:hover": {
-                backgroundColor: "#16a349",
-              },
-            }}
-          >
-            Submit
-          </Button>
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-white rounded-full border border-gray-200">
-            {isSaved ? (
-              <CloudDone className="text-green-600" sx={{ fontSize: 18 }} />
-            ) : (
-              <CloudUpload
-                className="text-yellow-600 animate-pulse"
-                sx={{ fontSize: 18 }}
-              />
-            )}
-            <span className="text-xs font-semibold text-gray-700">
-              {isSaved ? "Saved" : "Saving..."}
-            </span>
-          </div>
-
-          <Tooltip title="Reset">
-            <button onClick={handleReset}>
-              <RestartAlt className="text-gray-700" sx={{ fontSize: 18 }} />
-            </button>
+        {/* Action buttons */}
+        <div className="flex items-center gap-2">
+          <Tooltip title="Reset to default">
+            <IconButton
+              onClick={handleReset}
+              size="small"
+              sx={{
+                color: "#94a3b8",
+                "&:hover": { bgcolor: "#f1f5f9", color: "#64748b" },
+              }}
+            >
+              <RestartAlt sx={{ fontSize: 16 }} />
+            </IconButton>
           </Tooltip>
 
-          {/* <Tooltip title="Save">
+          <div className="w-px h-5 bg-slate-200 mx-1" />
+
+          {/* Run button — outlined */}
           <button
-            onClick={handleSaveManually}
-            disabled={isSaved}
-            className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors border shadow-sm ${
-              isSaved
-                ? "bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200"
-                : "bg-blue-600 hover:bg-blue-700 text-white border-blue-600"
-            }`}
-            title="Ctrl+S or Cmd+S"
+            onClick={handleRun}
+            disabled={isCodeRunning}
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-md border border-blue-600 text-blue-600 bg-white hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            <Save sx={{ fontSize: 18 }} />
-          </button> */}
+            {isCodeRunning ? (
+              <Sync sx={{ fontSize: 14 }} className="animate-spin" />
+            ) : (
+              <PlayArrowRounded sx={{ fontSize: 16 }} />
+            )}
+            Run
+          </button>
+
+          {/* Submit button — filled */}
+          <button
+            onClick={handleSubmit}
+            disabled={isCodeSubmitting}
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-md bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
+          >
+            {isCodeSubmitting ? (
+              <Sync sx={{ fontSize: 14 }} className="animate-spin" />
+            ) : (
+              <PublishRounded sx={{ fontSize: 16 }} />
+            )}
+            Submit
+          </button>
         </div>
       </div>
-      {/* -------------------------------------------------------------------
-                Monaco Editor
-      ------------------------------------------------------------------- */}
-      <div className="flex-1 overflow-hidden bg-white relative">
+
+      {/* ── Monaco Editor ── */}
+      <div className="flex-1 overflow-hidden bg-[#020817] relative">
         {isLoading ? (
           <div className="flex items-center justify-center h-full">
             <div className="flex flex-col items-center gap-3">
-              <div className="w-8 h-8 border-3 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-              <p className="text-sm text-gray-500 font-medium">
+              <div className="w-7 h-7 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+              <p className="text-xs text-slate-400 font-medium">
                 Loading editor...
               </p>
             </div>
@@ -438,17 +419,13 @@ export default function ProblemEditor({
             value={code}
             language={getLanguageMode(selectedLanguage)}
             onChange={(value) => {
-              if (value === code) {
-                return;
-              }
+              if (value === code) return;
               handleCodeChange(value);
             }}
             readOnly={false}
           />
         )}
       </div>
-
-     
     </div>
   );
 }
