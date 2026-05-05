@@ -42,6 +42,11 @@ export const USER_ROUTES = {
   COMPLETED_ASSESSMENTS: (userId: string) => `${API}/api/v1/user/${userId}/completed-assessments`,
 };
 
+export const KNOVIA_ROUTES = {
+  LAUNCH: `${API}/api/v1/knovia/launch`,
+  RESULT: (solutionId: string) => `${API}/api/v1/knovia/result/${solutionId}`,
+};
+
 const ADMIN = `${API}/api/v1/admin`;
 
 export const ADMIN_ROUTES = {

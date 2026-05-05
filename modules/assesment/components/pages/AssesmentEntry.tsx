@@ -422,7 +422,7 @@ function AssessmentLanding({
   async function doBegin() {
     try {
       passingForwardRef.current = true;
-      const result = await getAssesment(assessmentId, user!._id, passCode || undefined);
+      const result = await getAssesment(assessmentId, user!._id, passCode || undefined, user!.profileId);
       const solutionId = result.data._id;
 
       // Start assessment (sets hasAgreed=true) — skips the instructions page
@@ -797,7 +797,7 @@ export default function AssesmentEntry() {
       return;
     }
 
-    getAssesment(assessmentId, user._id)
+    getAssesment(assessmentId, user._id, undefined, user.profileId)
       .then((result) => {
         queryClient.setQueryData(["assesment", assessmentId, user._id], result);
         setPhase("assessment");

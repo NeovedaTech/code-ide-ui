@@ -9,8 +9,18 @@ import {
 } from "@/types/assessment";
 import { TokenList } from "@/types/execution";
 
-export const getAssesment = async (assessmentId: string, userId: string, passCode?: string) => {
-  const body: Record<string, string> = { userId, assessmentId };
+export const getAssesment = async (
+  assessmentId: string,
+  userId: string,
+  passCode?: string,
+  profileId?: number,
+) => {
+  const body: Record<string, string | number> = { assessmentId };
+  if (profileId) {
+    body.profileId = profileId;
+  } else {
+    body.userId = userId;
+  }
   if (passCode) body.passCode = passCode;
   const data = await post<ExamSolutionResponse>(
     `${ASSESMENT_ROUTES.GET_ASSESSMENT_SOLUTION}`,

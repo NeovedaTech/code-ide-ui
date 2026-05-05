@@ -12,6 +12,8 @@ export interface AuthUser {
   name: string;
   email: string;
   role: string;
+  profileId?: number;
+  authSource?: string;
   skillLevel: string;
   assessmentStatus: string;
 }
@@ -21,6 +23,7 @@ interface AuthState {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string, skillLevel?: string) => Promise<void>;
+  loginWithToken: (user: AuthUser) => void;
   logout: () => Promise<void>;
 }
 
@@ -96,12 +99,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await registerMutation.mutateAsync({ name, email, password, skillLevel });
   };
 
+  const loginWithToken = (ssoUser: AuthUser) => {
+    queryClient.setQueryData(["auth", "me"], ssoUser);
+  };
+
   const logout = async () => {
     await logoutMutation.mutateAsync();
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, isLoading, login, register, loginWithToken, logout }}>
       {children}
     </AuthContext.Provider>
   );
