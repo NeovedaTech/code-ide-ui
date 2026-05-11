@@ -9,7 +9,7 @@ import { encodeBase64 } from "@/helpers/codeUtils";
 import { CheckCircle2, AlertCircle, X } from "lucide-react";
 import { MonacoEditor } from "@/modules/assesment/components/problems/MonacoEditor";
 
-const JUDGE0_URL = "https://execution.velocify.in";
+const JUDGE0_URL = "https://execution.knovia.ai";
 
 const SNIPPETS: Record<string, string> = {
   python: `print("Hello, Knovia Playground!")`,
